@@ -1,0 +1,83 @@
+---
+type FieldType = 'text' | 'email' | 'url' | 'textarea';
+
+interface Props {
+  id: string;
+  label: string;
+  name?: string;
+  type?: FieldType;
+  placeholder?: string;
+  required?: boolean;
+  rows?: number;
+  class?: string;
+}
+
+const {
+  id,
+  label,
+  name = id,
+  type = 'text',
+  placeholder,
+  required = false,
+  rows = 4,
+  class: className = '',
+} = Astro.props;
+---
+
+<label class:list={['field', className]} for={id}>
+  <span>{label}</span>
+  {type === 'textarea' ? (
+    <textarea id={id} name={name} placeholder={placeholder} required={required} rows={rows}></textarea>
+  ) : (
+    <input id={id} name={name} type={type} placeholder={placeholder} required={required} />
+  )}
+</label>
+
+<style>
+  .field {
+    display: grid;
+    gap: var(--space-sm);
+  }
+
+  span {
+    color: var(--color-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--type-label-md-size);
+    font-weight: var(--type-label-md-weight);
+    letter-spacing: var(--type-label-md-letter-spacing);
+    line-height: var(--type-label-md-line-height);
+    text-transform: uppercase;
+  }
+
+  input,
+  textarea {
+    background: var(--input-background);
+    border: 1px solid var(--color-line);
+    border-radius: var(--input-radius);
+    color: var(--input-foreground);
+    min-height: var(--input-height);
+    padding: var(--input-padding);
+    transition:
+      background-color var(--transition-fast),
+      border-color var(--transition-fast);
+    width: 100%;
+  }
+
+  textarea {
+    min-height: 128px;
+    resize: vertical;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-muted);
+  }
+
+  input:hover,
+  textarea:hover,
+  input:focus,
+  textarea:focus {
+    background: #fff;
+    border-color: var(--color-primary);
+  }
+</style>

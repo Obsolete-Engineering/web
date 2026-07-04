@@ -1,0 +1,105 @@
+---
+type Variant = 'primary' | 'secondary' | 'ghost';
+type ButtonType = 'button' | 'submit' | 'reset';
+
+interface Props {
+  href?: string;
+  variant?: Variant;
+  type?: ButtonType;
+  disabled?: boolean;
+  class?: string;
+}
+
+const {
+  href,
+  variant = 'primary',
+  type = 'button',
+  disabled = false,
+  class: className = '',
+} = Astro.props;
+
+const Tag = href ? 'a' : 'button';
+---
+
+<Tag
+  href={href}
+  type={!href ? type : undefined}
+  disabled={!href ? disabled : undefined}
+  aria-disabled={href && disabled ? 'true' : undefined}
+  class:list={['button', `button--${variant}`, className]}
+>
+  <span><slot /></span>
+</Tag>
+
+<style>
+  .button {
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: var(--button-radius);
+    cursor: pointer;
+    display: inline-flex;
+    font-family: var(--font-mono);
+    font-size: var(--type-label-md-size);
+    font-weight: var(--type-label-md-weight);
+    gap: var(--space-sm);
+    justify-content: center;
+    letter-spacing: var(--type-label-md-letter-spacing);
+    line-height: var(--type-label-md-line-height);
+    min-height: var(--button-height);
+    padding-inline: var(--button-padding-inline);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition:
+      background-color var(--transition-fast),
+      border-color var(--transition-fast),
+      color var(--transition-fast),
+      transform var(--transition-fast);
+    user-select: none;
+  }
+
+  .button:hover {
+    transform: translateY(-1px);
+  }
+
+  .button:active {
+    transform: translateY(0);
+  }
+
+  .button--primary {
+    background: var(--color-tertiary);
+    color: var(--color-on-tertiary);
+  }
+
+  .button--primary:hover {
+    background: color-mix(in srgb, var(--color-tertiary) 90%, var(--color-primary));
+  }
+
+  .button--secondary {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  .button--secondary:hover {
+    background: var(--color-surface-inverse);
+  }
+
+  .button--ghost {
+    background: transparent;
+    border-color: var(--color-line);
+    color: var(--color-primary);
+  }
+
+  .button--ghost:hover {
+    background: var(--color-surface);
+    border-color: var(--color-primary);
+  }
+
+  .button:disabled,
+  .button[aria-disabled='true'] {
+    color: var(--color-muted);
+    cursor: not-allowed;
+    opacity: 0.62;
+    pointer-events: none;
+    transform: none;
+  }
+</style>

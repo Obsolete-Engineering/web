@@ -1,0 +1,54 @@
+---
+type Tone = 'neutral' | 'success' | 'warning' | 'error' | 'signal';
+
+interface Props {
+  tone?: Tone;
+  class?: string;
+}
+
+const { tone = 'neutral', class: className = '' } = Astro.props;
+---
+
+<span class:list={['chip', `chip--${tone}`, className]}><slot /></span>
+
+<style>
+  .chip {
+    align-items: center;
+    background: var(--chip-background);
+    border: 1px solid var(--color-line);
+    border-radius: var(--chip-radius);
+    color: var(--chip-foreground);
+    display: inline-flex;
+    font-family: var(--font-mono);
+    font-size: var(--type-label-sm-size);
+    font-weight: var(--type-label-sm-weight);
+    gap: var(--space-xs);
+    letter-spacing: var(--type-label-sm-letter-spacing);
+    line-height: var(--type-label-sm-line-height);
+    min-height: 24px;
+    padding-inline: var(--chip-padding-inline);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .chip--success {
+    border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-line));
+    color: var(--color-success);
+  }
+
+  .chip--warning {
+    border-color: color-mix(in srgb, var(--color-warning) 45%, var(--color-line));
+    color: color-mix(in srgb, var(--color-warning) 82%, var(--color-primary));
+  }
+
+  .chip--error {
+    border-color: color-mix(in srgb, var(--color-error) 35%, var(--color-line));
+    color: var(--color-error);
+  }
+
+  .chip--signal {
+    background: var(--color-tertiary);
+    border-color: var(--color-tertiary);
+    color: var(--color-on-tertiary);
+  }
+</style>

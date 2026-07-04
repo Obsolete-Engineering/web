@@ -1,0 +1,108 @@
+:root {
+  /* Color tokens */
+  --color-primary: #111111;
+  --color-secondary: #6f6a61;
+  --color-tertiary: #ff4b1f;
+  --color-neutral: #f4f1ea;
+  --color-surface: #ebe6dc;
+  --color-surface-raised: #fffdf8;
+  --color-surface-inverse: #1a1a1a;
+  --color-line: #d8d2c7;
+  --color-muted: #8b857a;
+  --color-on-primary: #f4f1ea;
+  --color-on-tertiary: #111111;
+  --color-success: #1f8f4d;
+  --color-warning: #d99a00;
+  --color-error: #d72626;
+
+  /* Typography tokens */
+  --font-sans: Inter, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "Space Mono", "Courier New", monospace;
+
+  --type-headline-display-size: clamp(3.5rem, 9vw, 4.5rem);
+  --type-headline-display-weight: 600;
+  --type-headline-display-line-height: 0.95;
+  --type-headline-display-letter-spacing: -0.05em;
+
+  --type-headline-lg-size: clamp(2.5rem, 6vw, 3rem);
+  --type-headline-lg-weight: 600;
+  --type-headline-lg-line-height: 1;
+  --type-headline-lg-letter-spacing: -0.04em;
+
+  --type-headline-md-size: clamp(1.75rem, 4vw, 2rem);
+  --type-headline-md-weight: 600;
+  --type-headline-md-line-height: 1.05;
+  --type-headline-md-letter-spacing: -0.03em;
+
+  --type-body-lg-size: 1.25rem;
+  --type-body-lg-weight: 400;
+  --type-body-lg-line-height: 1.45;
+  --type-body-lg-letter-spacing: -0.01em;
+
+  --type-body-md-size: 1rem;
+  --type-body-md-weight: 400;
+  --type-body-md-line-height: 1.55;
+  --type-body-md-letter-spacing: -0.005em;
+
+  --type-body-sm-size: 0.875rem;
+  --type-body-sm-weight: 400;
+  --type-body-sm-line-height: 1.45;
+  --type-body-sm-letter-spacing: 0;
+
+  --type-label-md-size: 0.75rem;
+  --type-label-md-weight: 500;
+  --type-label-md-line-height: 1;
+  --type-label-md-letter-spacing: 0.04em;
+
+  --type-label-sm-size: 0.6875rem;
+  --type-label-sm-weight: 500;
+  --type-label-sm-line-height: 1;
+  --type-label-sm-letter-spacing: 0.06em;
+
+  /* Shape tokens */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Spacing tokens */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-xxl: 64px;
+  --space-section: clamp(72px, 10vw, 120px);
+  --space-container: 1440px;
+  --space-gutter: clamp(16px, 3vw, 24px);
+
+  /* Component tokens */
+  --button-height: 44px;
+  --button-padding-inline: 14px;
+  --button-radius: var(--radius-sm);
+
+  --card-background: var(--color-surface);
+  --card-foreground: var(--color-primary);
+  --card-radius: var(--radius-md);
+  --card-padding: 24px;
+
+  --panel-inverse-background: var(--color-surface-inverse);
+  --panel-inverse-foreground: var(--color-on-primary);
+  --panel-radius: var(--radius-md);
+  --panel-padding: 24px;
+
+  --chip-background: var(--color-neutral);
+  --chip-foreground: var(--color-primary);
+  --chip-radius: var(--radius-full);
+  --chip-padding-inline: 8px;
+
+  --input-background: var(--color-surface-raised);
+  --input-foreground: var(--color-primary);
+  --input-radius: var(--radius-sm);
+  --input-padding: 14px;
+  --input-height: 48px;
+
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-tertiary) 30%, transparent);
+  --transition-fast: 160ms ease;
+}

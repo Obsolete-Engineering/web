@@ -1,0 +1,92 @@
+---
+import Chip from './Chip.astro';
+import Button from './Button.astro';
+
+interface Props {
+  label?: string;
+  title: string;
+  description?: string;
+  status?: string;
+  href?: string;
+  action?: string;
+  class?: string;
+}
+
+const {
+  label,
+  title,
+  description,
+  status,
+  href,
+  action,
+  class: className = '',
+} = Astro.props;
+---
+
+<article class:list={['card', className]}>
+  <div class="card__content">
+    {label && <p class="kicker">{label}</p>}
+    <h3>{title}</h3>
+    {description && <p class="card__description">{description}</p>}
+    <slot />
+  </div>
+
+  {(status || href) && (
+    <footer class="card__footer">
+      {status && <Chip>{status}</Chip>}
+      {href && action && <Button href={href} variant="ghost">{action}</Button>}
+    </footer>
+  )}
+</article>
+
+<style>
+  .card {
+    background: var(--card-background);
+    border: 1px solid var(--color-line);
+    border-radius: var(--card-radius);
+    color: var(--card-foreground);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    min-height: 100%;
+    padding: var(--card-padding);
+    transition:
+      background-color var(--transition-fast),
+      border-color var(--transition-fast),
+      transform var(--transition-fast);
+  }
+
+  .card:hover {
+    background: var(--color-surface-raised);
+    border-color: color-mix(in srgb, var(--color-primary) 24%, var(--color-line));
+    transform: translateY(-2px);
+  }
+
+  .card__content {
+    --flow-space: var(--space-md);
+  }
+
+  .card__content > * + * {
+    margin-top: var(--flow-space);
+  }
+
+  h3 {
+    font-size: var(--type-headline-md-size);
+    font-weight: var(--type-headline-md-weight);
+    letter-spacing: var(--type-headline-md-letter-spacing);
+    line-height: var(--type-headline-md-line-height);
+  }
+
+  .card__description {
+    color: var(--color-secondary);
+  }
+
+  .card__footer {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    justify-content: space-between;
+    margin-top: auto;
+  }
+</style>

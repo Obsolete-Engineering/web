@@ -1,4 +1,6 @@
 ---
+import Header from '../components/Header.astro';
+import { accessibilityCopy, metaCopy } from '../copy';
 import '../styles/global.css';
 
 interface Props {
@@ -7,8 +9,8 @@ interface Props {
 }
 
 const {
-  title = 'Obsolete — Beautiful software for retiring bad systems',
-  description = 'A design-led software house for replacing outdated tools, workflows, and badly designed software.',
+  title = metaCopy.title,
+  description = metaCopy.description,
 } = Astro.props;
 ---
 
@@ -23,11 +25,14 @@ const {
     <meta name="generator" content={Astro.generator} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
     <title>{title}</title>
   </head>
   <body>
-    <a class="skip-link" href="#content">Skip to content</a>
-    <slot />
+    <a class="skip-link" href="#content">{accessibilityCopy.skipLink}</a>
+    <Header />
+    <main id="content">
+      <slot />
+    </main>
   </body>
 </html>

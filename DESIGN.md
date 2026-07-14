@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: Obsolete
-description: A design-led software house identity for replacing outdated tools, workflows, and badly designed software.
+description: A creative technology studio identity built around good taste, serious engineering, and ambitious digital experiences.
 
 colors:
 primary: "#111111"
@@ -121,7 +121,7 @@ textColor: "{colors.on-primary}"
 typography: "{typography.body-md}"
 rounded: "{rounded.md}"
 padding: 24px
-chip-status:
+chip-label:
 backgroundColor: "{colors.neutral}"
 textColor: "{colors.primary}"
 typography: "{typography.label-sm}"
@@ -140,49 +140,72 @@ height: 48px
 
 ## Overview
 
-Obsolete is a design-led software house.
+Obsolete is a creative technology studio for creative companies.
 
-The brand builds digital products, platforms, tools, and systems for teams ready to replace outdated ways of working. The website should not look old, broken, nostalgic, or retro. It should look like the replacement: clear, precise, useful, and slightly amused by the mess it was built to remove.
+The studio designs and builds ambitious digital experiences where strong ideas,
+sharp creative thinking, and serious engineering meet. The website should feel
+confident, culturally aware, and expertly made. “Obsolete” is the name, not a
+line that every message has to explain.
 
 The visual identity combines:
 
-* software interface
-* technical manual
-* industrial design object
-* product documentation
-* decommission notice
-* design studio restraint
-* dry system humour
+* editorial design
+* software precision
+* industrial design objects
+* contemporary culture
+* interactive craft
+* studio restraint
+* playful intelligence
 
-The emotional tone is serious but playful. Obsolete should feel engineered, tasteful, calm, useful, and quietly strange. The humour should appear in small details, not in the main structure.
+The emotional tone is playfully intelligent. Obsolete should feel tasteful,
+technically formidable, curious, collaborative, and quietly confident.
+Personality should come through in memorable ideas and precise details, never
+forced jokes or agency theatre.
 
 Primary brand idea:
 
-**Beautiful software for retiring bad systems.**
+**The internet could be more interesting.**
 
-The website should make visitors feel that Obsolete cares equally about interface, product logic, engineering quality, and the removal of unnecessary complexity.
+Supporting proposition:
 
-The design should never feel like a generic software agency, SaaS template, startup landing page, cyberpunk brand, or retro computer joke.
+**Good taste. Serious engineering.**
 
-Obsolete is not trying to look obsolete.
+The website should show that Obsolete cares equally about creative direction,
+interaction, engineering quality, and the experience people have with the
+finished work.
 
-Obsolete makes the old way obsolete.
+The design should never feel like a generic digital agency, SaaS template,
+startup landing page, trend-chasing portfolio, cyberpunk brand, or retro
+computer joke.
+
+Do not build the voice around retirement, replacement, or explaining the
+company name. Obsolete is the identity; the work is the story.
 
 ## Colors
 
-The palette is restrained, warm, and functional. It should feel like engineering paper, a system label, a product manual, and a software interface.
+The palette is restrained, warm, and functional. It should feel at home across
+printed matter, a studio worktable, and a precisely made digital experience.
 
-* **Primary / Ink (#111111):** Used for main text, headlines, dark panels, and high-confidence interface elements.
-* **Secondary / Utility Grey (#6F6A61):** Used for captions, metadata, quiet copy, and supporting interface language.
-* **Tertiary / Signal Orange (#FF4B1F):** The only expressive accent. Used for primary calls to action, alerts, status moments, and small brand details.
-* **Neutral / Paper (#F4F1EA):** Main background. Softer than white, warmer than grey.
-* **Surface (#EBE6DC):** Used for cards, panels, grouped sections, and interface blocks.
-* **Surface Raised (#FFFDF8):** Used for inputs, active panels, and areas that need to sit slightly above the page.
-* **Surface Inverse (#1A1A1A):** Used for high-contrast sections, footer modules, and dark system panels.
-* **Line (#D8D2C7):** Used for rules, dividers, borders, grids, and structural elements.
+* **Primary / Ink (#111111):** Used for main text, headlines, dark panels, and
+  high-confidence elements.
+* **Secondary / Utility Grey (#6F6A61):** Used for captions, project details,
+  quiet copy, and supporting information.
+* **Tertiary / Orange (#FF4B1F):** The only expressive accent. Used for primary
+  calls to action, emphasis, moments of surprise, and small brand details.
+* **Neutral / Paper (#F4F1EA):** Main background. Softer than white, warmer
+  than grey.
+* **Surface (#EBE6DC):** Used for cards, panels, grouped sections, and composed
+  content blocks.
+* **Surface Raised (#FFFDF8):** Used for inputs, active panels, and areas that
+  need to sit slightly above the page.
+* **Surface Inverse (#1A1A1A):** Used for high-contrast sections, footer
+  modules, and immersive visual moments.
+* **Line (#D8D2C7):** Used for rules, dividers, borders, grids, and structural
+  elements.
 * **Muted (#8B857A):** Used for lower-emphasis labels and disabled states.
 
-The signal color should be used like a system event, not decoration. One important orange thing per view is usually enough.
+Use orange like punctuation, not decoration. One important orange thing per
+view is usually enough.
 
 Avoid gradients, neon palettes, rainbow systems, and colourful SaaS decoration.
 
@@ -190,71 +213,85 @@ Avoid gradients, neon palettes, rainbow systems, and colourful SaaS decoration.
 
 Typography carries most of the identity.
 
-Use a clean sans-serif for core brand communication and a mono font for system metadata. The sans-serif should feel modern, precise, and neutral enough to let the words do the work. The mono should feel like product labels, version numbers, small machine notes, and interface metadata.
+Use a clean sans-serif for core brand communication and a mono font as a
+technical counterpoint. The sans-serif should feel modern, precise, and neutral
+enough to let the ideas do the work. Use mono for project indices, disciplines,
+captions, and small production details—not fake operating-system messages.
 
-Headlines should be short, direct, and confident.
+Headlines should be short, memorable, and confident. Lead with an interesting
+thought, then make the offer clear in supporting copy.
 
 Good headline examples:
 
-* Make the old way obsolete.
-* Retire your workaround.
-* Software, considered.
-* Goodbye, bad interface.
-* Built to replace what no longer works.
+* The internet could be more interesting.
+* Good taste. Serious engineering.
+* Bring us the idea you cannot stop thinking about.
+* Make something worth spending time with.
+* Complicated, made delightful.
 
-Use mono typography for labels such as:
+Use mono typography for concise supporting labels such as:
 
-* `status: old way detected`
-* `service: repair`
-* `system: replacement pending`
-* `version: v0.1`
-* `result: process retired`
+* `Creative technology studio`
+* `Selected work — 01`
+* `Design + engineering`
+* `Idea → launch`
+* `Built for the web`
 
-Do not overuse mono typography. Obsolete should feel like a designed software house, not a code editor theme.
+Never use mono styling to turn the page into a fake terminal, status screen, or
+software dashboard. Obsolete should feel like a highly skilled creative studio,
+not a code editor theme.
 
-Avoid overly quirky display fonts. The brand’s strangeness should come from language, layout, and interaction details, not novelty type.
+Avoid overly quirky display fonts. The brand’s personality should come from
+language, composition, and interaction details, not novelty type.
 
 ## Layout
 
-The layout should feel like a working interface rather than a brochure.
+The layout should feel like a carefully art-directed digital experience rather
+than a brochure or software dashboard.
 
-Use a strict grid, generous spacing, clear hierarchy, thin rules, modular sections, and object-like panels. Pages should feel intentionally assembled, not decorated.
+Use a strong grid, generous spacing, clear hierarchy, thin rules, modular
+sections, and confident composition. Pages should feel intentionally assembled,
+not decorated.
 
 Layout principles:
 
 * use strong alignment
-* favour clear blocks over freeform composition
+* balance clear blocks with moments of expressive composition
 * use thin borders instead of decorative shapes
 * allow large empty space around important statements
-* group related content into interface-like panels
-* make metadata visible
-* use before/after structures where useful
-* make every section feel useful
+* frame work with restraint so the work remains the focus
+* make project details easy to scan
+* create rhythm through scale, contrast, and pacing
+* make every section earn its place
 
-Desktop layouts can be more technical and grid-based. Mobile layouts should feel like a stacked manual: simple, readable, and direct.
+Desktop layouts can be more expansive and art-directed. Mobile layouts should
+retain the same confidence while remaining simple, readable, and direct.
 
 Suggested homepage structure:
 
 1. Hero
-2. What we replace
+2. Selected work
 3. What we make
 4. How we work
-5. Selected work
-6. Services
+5. Services
+6. About and perspective
 7. Contact CTA
 
-The site should make the old way feel heavy, messy, slow, or fragile — and make Obsolete feel like the clean replacement.
+The site should demonstrate the combination of taste and engineering before it
+claims it. Creative companies should leave feeling understood, excited, and
+confident that Obsolete can make the idea real.
 
 ## Elevation & Depth
 
-Depth should be created through tonal contrast, borders, spacing, and layering rather than heavy shadows.
+Depth should be created through tonal contrast, borders, spacing, and layering
+rather than heavy shadows.
 
 Use:
 
 * thin borders
 * surface changes
 * inset panels
-* metadata strips
+* caption bars
 * dark inverse panels
 * subtle raised surfaces
 * structured overlap only when useful
@@ -267,13 +304,16 @@ Avoid:
 * dramatic blur
 * excessive depth effects
 
-The site should feel flat, structured, and object-like. It should resemble a useful system, not a marketing graphic.
+The site should feel flat, structured, and object-like. It should resemble a
+carefully made digital object, not a marketing graphic.
 
 ## Shapes
 
 The shape language is precise and minimally softened.
 
-Use sharp or slightly rounded corners. The default radius should be small. Components can be squared when the interface needs to feel more industrial or direct.
+Use sharp or slightly rounded corners. The default radius should be small.
+Components can be squared when the interface needs to feel more industrial or
+direct.
 
 Shape principles:
 
@@ -284,168 +324,180 @@ Shape principles:
 * panels: modest radius
 * rules and dividers: thin and visible
 
-Avoid bubbly UI, overly soft cards, pill-shaped everything, and decorative blob shapes.
+Avoid bubbly UI, overly soft cards, pill-shaped everything, and decorative blob
+shapes.
 
-The overall shape language should feel engineered, not friendly for the sake of being friendly.
+The overall shape language should feel engineered and intentional, never cold
+for the sake of appearing technical.
 
 ## Components
 
 ### Buttons
 
-Buttons should be direct, compact, and slightly deadpan.
+Buttons should be direct, compact, inviting, and slightly playful.
 
 Primary CTA examples:
 
-* `Show us the old way`
-* `Start replacing`
-* `Retire a system`
-* `Discuss a replacement`
+* `Bring us an idea`
+* `Start a conversation`
+* `Make something interesting`
+* `Tell us what you are thinking`
 
 Secondary CTA examples:
 
-* `View repairs`
-* `Inspect work`
-* `See the process`
-* `Read the notes`
+* `See our work`
+* `How we work`
+* `Meet the studio`
+* `Read our notes`
 
-Buttons should have clear hover, active, disabled, and focus states. Focus states must be visible and should use the signal color.
+Buttons should have clear hover, active, disabled, and focus states. Focus
+states must be visible and should use the orange accent.
 
 ### Cards
 
-Cards should feel like product modules or system records.
+Cards should feel like restrained editorial frames for work, capabilities, or
+ideas.
 
 A good card includes:
 
-* small mono label
+* small mono label or project index
 * short title
-* useful description
-* optional status or metadata
+* specific description
+* optional discipline, year, or collaborator details
 * clear action
 
 Example:
 
-`service: repair`
+`capability / creative development`
 
-**Interface repair**
+#### Digital experiences
 
-For products that technically work, but feel painful, cluttered, or unclear.
+Distinctive websites and interactive products where strong ideas meet serious
+engineering.
 
-`status: useful when redesigned`
+`Designed to be remembered. Built to perform.`
 
-### Tags and Status Labels
+### Tags and Labels
 
-Tags should feel like system labels, not marketing badges.
+Tags should help people scan the work and understand the studio’s capabilities.
+They should feel precise, not promotional.
 
 Examples:
 
-* `design-led`
-* `replacement`
-* `repair`
-* `retired`
-* `old way detected`
-* `built properly`
-* `interface repaired`
-* `process retired`
+* `creative direction`
+* `design`
+* `engineering`
+* `interactive`
+* `prototyping`
+* `motion`
+* `launch`
+* `ongoing support`
 
 ### Forms
 
-Forms should feel like submitting an old system for inspection.
+Forms should feel like the beginning of a good conversation, not submitting a
+ticket.
 
 Field labels:
 
-* `What needs replacing?`
-* `Where does it hurt?`
-* `Who still uses this?`
-* `How are you solving it now?`
-* `Screenshots, links, or notes`
+* `What are you hoping to make?`
+* `What makes the idea interesting?`
+* `Who is it for?`
+* `Why now?`
+* `Links, references, or useful context`
 
 Submit button:
 
-* `Send old way`
-* `Begin replacement`
-* `Submit for inspection`
+* `Bring us an idea`
+* `Send the brief`
+* `Start the conversation`
 
 Success message:
 
-`Old way received. We will inspect it shortly.`
+`Idea received. We will be in touch soon.`
 
 Error message:
 
-`Something resisted replacement. Try again.`
+`That did not send. Give it another go.`
 
 ### Case Studies
 
-Case studies should be framed as system replacements, not generic portfolio pieces.
+Case studies should feel like collaborations and demonstrate the combination of
+creative judgment and technical depth. Avoid generic portfolio summaries and
+unexplained beauty shots.
 
 Recommended structure:
 
-* client
-* old system
-* problem
-* replacement
-* what was retired
+* client and context
+* the idea or brief
+* creative approach
+* technical challenge
+* what we made
 * result
 
 Example:
 
-**Old system:** Spreadsheet with 14 tabs and one terrified owner.
-**Replacement:** Custom quoting tool with approval states and pricing logic.
-**Retired:** Duplicate entry, version confusion, approval chasing, and avoidable panic.
+**Idea:** Turn a complex cultural archive into an experience worth exploring.
+**Creative approach:** Treat discovery like wandering, not searching.
+**Engineering:** Deliver fast, accessible interaction across thousands of
+pieces of content.
+**Result:** A distinctive digital destination that invites people to stay.
 
 ### Motion
 
-Motion should feel functional, not decorative.
+Motion should feel expressive and purposeful, never added as surface
+decoration.
 
 Use:
 
 * quick fades
-* snapping panels
-* cursor-like reveals
-* status changes
-* simple progress transitions
-* cross-outs
-* archive/replacement moments
-* interface state changes
+* precise reveals
+* typographic transitions
+* tactile hover responses
+* restrained spatial movement
+* transitions that support the central idea
+* occasional moments of surprise
 
 Avoid:
 
 * bouncy animation
-* liquid motion
+* liquid motion without a concept
 * heavy parallax
 * glitch overload
-* slow cinematic transitions
+* slow cinematic transitions that delay the experience
 
-Motion should feel like a system responding.
+Motion should feel art-directed and technically assured.
 
 ## Do's and Don'ts
 
 Do:
 
-* make the site feel like a designed software product
-* use the signal color sparingly
+* make the site feel like a carefully made digital experience
+* use the orange accent sparingly
 * use typography, spacing, and grid as the main identity
-* make services feel like named system modules
-* use dry humour in small details
-* show product thinking, not just visuals
-* write direct, useful copy
+* present services as clear creative and technical capabilities
+* use playful intelligence in memorable details
+* show taste, process, and technical thinking—not just polished visuals
+* write direct, specific copy
 * use borders and panels to create structure
-* make accessibility non-negotiable
-* make the old way feel ready to retire
+* make accessibility and performance non-negotiable
+* make creative companies feel understood and excited to collaborate
 
 Don't:
 
-* make the brand look old, dusty, broken, or nostalgic
+* make every sentence explain the name Obsolete
+* use retirement and replacement as recurring messaging devices
+* sound like a generic agency or SaaS company
 * use generic SaaS gradients
 * use cyberpunk styling
 * overuse glitch effects
 * copy Teenage Engineering too directly
-* rely on fake code screenshots
+* rely on fake code screenshots, statuses, or version numbers
 * use stock office imagery
 * make everything lowercase just for style
 * use vague innovation language
 * add decorative icons without function
-* make the brand silly
-* use more software when less would do
+* force jokes until the expertise feels unserious
 
 Avoid copy such as:
 
@@ -458,26 +510,30 @@ Avoid copy such as:
 * seamless experiences
 * disruptive innovation
 * world-class technology
+* we make things obsolete
+* retire the old way
+* replacement pending
 
-Prefer copy such as:
+Prefer language such as:
 
-* replace
-* retire
-* repair
-* reduce
-* diagnose
-* system
-* interface
-* product
-* tool
-* workflow
-* useful
+* idea
+* make
+* build
+* design
+* engineer
+* craft
+* experiment
+* collaborate
+* interesting
+* ambitious
+* distinctive
 * considered
-* built properly
-* old way
-* workaround
-* no longer fit for purpose
+* useful
+* human
+* delightful
+* technically serious
 
 Final rule:
 
-**Every design decision should make Obsolete feel like the calm, useful replacement for a system that has outstayed its welcome.**
+**Every design decision should show that Obsolete brings good taste and
+serious engineering to ideas worth making.**

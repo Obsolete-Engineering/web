@@ -5,18 +5,13 @@ import { headerCopy } from '../copy';
 
 <header class="site-header" aria-label={headerCopy.ariaLabel}>
   <div class="site-header__inner">
-    <div class="site-header__identity" aria-label={headerCopy.identityAriaLabel}>
+    <div class="site-header__identity">
       <a class="site-header__wordmark" href="/" aria-label={headerCopy.wordmarkAriaLabel}>
         <img class="site-header__wordmark-logo" src={logoUrl.src} alt="" aria-hidden="true" loading="eager" />
         <span>{headerCopy.wordmark}</span>
       </a>
       <span class="site-header__rule" aria-hidden="true"></span>
-      <p class="site-header__status" aria-label={headerCopy.statusAriaLabel}>
-        <span class="site-header__signal" aria-hidden="true"></span>
-        <span class="site-header__status-copy">
-          {headerCopy.statusLines.map((line) => <span>{line}</span>)}
-        </span>
-      </p>
+      <p class="site-header__descriptor">{headerCopy.descriptor}</p>
     </div>
 
     <nav class="site-header__nav" aria-label={headerCopy.navAriaLabel}>
@@ -78,35 +73,15 @@ import { headerCopy } from '../copy';
     height: 34px;
   }
 
-  .site-header__status {
-    align-items: center;
+  .site-header__descriptor {
     color: var(--color-secondary);
-    display: flex;
     flex: 0 1 auto;
-    gap: calc(var(--space-sm) + var(--space-xs));
+    font-size: var(--type-body-sm-size);
+    font-weight: 600;
+    letter-spacing: var(--type-body-md-letter-spacing);
+    line-height: 1.2;
     margin: 0;
     min-width: 0;
-  }
-
-  .site-header__signal {
-    background: var(--color-tertiary);
-    border-radius: var(--radius-full);
-    flex: 0 0 7px;
-    height: 7px;
-    width: 7px;
-  }
-
-  .site-header__status-copy {
-    display: flex;
-    flex-direction: column;
-    font-family: var(--font-mono);
-    font-size: var(--type-label-sm-size);
-    font-weight: 600;
-    gap: var(--space-xs);
-    letter-spacing: var(--type-label-md-letter-spacing);
-    line-height: 1;
-    min-width: 0;
-    text-transform: uppercase;
     white-space: nowrap;
   }
 
@@ -178,7 +153,7 @@ import { headerCopy } from '../copy';
       display: none;
     }
 
-    .site-header__status {
+    .site-header__descriptor {
       flex-basis: 100%;
     }
   }

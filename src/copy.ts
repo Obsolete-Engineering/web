@@ -15,32 +15,34 @@ export const headerCopy = {
 	descriptor: "Creative technology studio",
 	navAriaLabel: "Primary navigation",
 	navItems: [
-		{ label: "Work", href: "#work" },
-		{ label: "Services", href: "#services" },
-		{ label: "About", href: "#about" },
-		{ label: "Notes", href: "#notes" },
-		{ label: "Contact", href: "#contact" },
+		{ label: "Work", href: "/work" },
+		{ label: "Contact", href: "/contact", accent: true },
 	],
 } as const;
 
 export const heroCopy = {
+	eyebrow: "Creative technology studio",
 	title: {
+		accessible: "The internet could be more interesting.",
 		firstLine: "The internet",
-		secondLine: "could be more interesting",
+		middleLine: "could be more",
+		lastLine: "interesting",
 		punctuation: ".",
 	},
-	lead: "Obsolete is a creative technology studio for creative companies. We combine good taste with serious engineering to build ambitious digital experiences people actually want to spend time with.",
+	lead: "Obsolete is a creative technology studio for creative companies. We design and engineer ambitious digital experiences worth spending time with.",
 	actionsAriaLabel: "Hero actions",
 	actions: {
 		primary: {
 			label: "Bring us an idea",
-			href: "#contact",
-			suffix: "→",
+			href: "/contact",
+			suffix: "↗",
 		},
 		secondary: {
 			label: "See our work",
-			href: "#work",
+			href: "/work",
+			suffix: "→",
 		},
 	},
-	visualAriaLabel: "Animated Obsolete mark",
+	visualAriaLabel: "Animated Obsolete mark formed from particles",
+	visualCaption: "Particle study / form in motion",
 } as const;

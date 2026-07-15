@@ -40,15 +40,15 @@ export default function ObsoleteHeroIsland() {
 		>
 			<div
 				style={{
-					aspectRatio: `${COMPOSITION_WIDTH} / ${COMPOSITION_HEIGHT}`,
-					maxHeight: "100%",
-					maxWidth: "100%",
+					height: "100%",
 					overflow: "hidden",
+					position: "relative",
 					width: "100%",
 				}}
 			>
 				<Player
 					autoPlay={!reducedMotion}
+					initialFrame={560}
 					loop={!reducedMotion}
 					initiallyMuted
 					controls={false}
@@ -62,10 +62,18 @@ export default function ObsoleteHeroIsland() {
 					style={{
 						display: "block",
 						height: "100%",
-						maxHeight: "100%",
-						maxWidth: "100%",
 						overflow: "hidden",
 						width: "100%",
+					}}
+				/>
+				<div
+					aria-hidden="true"
+					style={{
+						background:
+							"linear-gradient(to right, #f4f1ea 0%, rgba(244, 241, 234, 0) 14%, rgba(244, 241, 234, 0) 86%, #f4f1ea 100%), linear-gradient(to bottom, #f4f1ea 0%, rgba(244, 241, 234, 0) 18%, rgba(244, 241, 234, 0) 82%, #f4f1ea 100%)",
+						inset: 0,
+						pointerEvents: "none",
+						position: "absolute",
 					}}
 				/>
 			</div>

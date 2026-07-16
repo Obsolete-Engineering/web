@@ -1,15 +1,18 @@
 {
   "name": "obsolete-web",
-  "type": "module",
   "version": "0.0.1",
-  "engines": {
-    "node": ">=22.12.0"
-  },
+  "type": "module",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "prepare": "lefthook install",
+    "check": "astro check",
+    "lint": "oxlint src --deny-warnings",
+    "lint:fix": "oxlint src --fix",
+    "format": "oxfmt --write src astro.config.mjs package.json tsconfig.json",
+    "format:check": "oxfmt --check src astro.config.mjs package.json tsconfig.json"
   },
   "dependencies": {
     "@astrojs/react": "6.0.1",
@@ -21,5 +24,15 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.484"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "lefthook": "^2.1.10",
+    "oxfmt": "^0.59.0",
+    "oxlint": "^1.74.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

@@ -1,0 +1,518 @@
+---
+import desktopImage from "../assets/img/craft-applied-desktop.jpg";
+import mobileImage from "../assets/img/craft-applied-mobile.jpg";
+
+const project = {
+    eyebrow: "Featured work — 01",
+    status: {
+        desktop: "Design + development / Live",
+        mobile: "Live",
+    },
+    title: "Craft Applied",
+    statement: "A clearer, faster home for a multidisciplinary digital studio.",
+    summary:
+        "We designed and developed a content-rich website that turns a broad service offering into a clear journey—from capabilities and technology to selected work, editorial thinking, and contact.",
+    facts: [
+        [
+            ["Client", "Craft Applied"],
+            ["Role", "Design + development"],
+        ],
+        [
+            ["Focus", "Strategy, UX/UI, content architecture, engineering"],
+            ["Platform", "Astro, SolidJS, TailwindCSS, Plausible"],
+        ],
+    ],
+    url: "https://craftapplied.com",
+} as const;
+---
+
+<section class="featured-work" id="featured-work" aria-labelledby="featured-work-title">
+    <div class="featured-work__inner">
+        <header class="featured-work__rail">
+            <div class="featured-work__eyebrow">
+                <span aria-hidden="true"></span>
+                <p>{project.eyebrow}</p>
+            </div>
+            <p class="featured-work__status">
+                <span class="featured-work__status-desktop">{project.status.desktop}</span>
+                <span class="featured-work__status-mobile">{project.status.mobile}</span>
+            </p>
+        </header>
+
+        <div class="featured-work__header">
+            <h2 id="featured-work-title">
+                <span>Craft</span><br class="featured-work__title-break" /><span> Applied</span>
+            </h2>
+            <div class="featured-work__introduction">
+                <p class="featured-work__statement">{project.statement}</p>
+                <p class="featured-work__summary">{project.summary}</p>
+            </div>
+        </div>
+
+        <figure class="featured-work__proof">
+            <picture>
+                <source media="(max-width: 700px)" srcset={mobileImage.src} />
+                <img
+                    src={desktopImage.src}
+                    width="1440"
+                    height="650"
+                    alt="The Craft Applied homepage, with cream typography on a deep green background describing its website and application work."
+                    loading="lazy"
+                    decoding="async"
+                />
+            </picture>
+            <figcaption>
+                <span class="featured-work__caption-desktop">Live project view / Desktop</span>
+                <span class="featured-work__caption-mobile">Responsive proof</span>
+                <span class="featured-work__caption-site">craftapplied.com</span>
+                <span class="featured-work__caption-width">390 px</span>
+            </figcaption>
+        </figure>
+
+        <div class="featured-work__ledger">
+            <dl class="featured-work__facts">
+                {project.facts.map((row) => (
+                    <div class="featured-work__facts-row">
+                        {row.map(([term, description]) => (
+                            <div class="featured-work__fact">
+                                <dt>{term}</dt>
+                                <dd>{description}</dd>
+                            </div>
+                        ))}
+                    </div>
+                ))}
+            </dl>
+
+            <a
+                class="featured-work__cta"
+                href={project.url}
+                aria-label="Visit Craft Applied (external site)"
+            >
+                <span>Visit Craft Applied</span>
+                <span aria-hidden="true">↗</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<style>
+    .featured-work {
+        background: var(--color-surface);
+        color: var(--color-primary);
+        min-height: 1080px;
+        padding: 64px 20px;
+    }
+
+    .featured-work__inner {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-inline: auto;
+        max-width: 350px;
+    }
+
+    .featured-work__rail,
+    .featured-work__eyebrow,
+    .featured-work__cta,
+    figcaption {
+        align-items: center;
+        display: flex;
+    }
+
+    .featured-work__rail {
+        height: 12px;
+        justify-content: space-between;
+    }
+
+    .featured-work__eyebrow {
+        font-family: var(--font-mono);
+        font-size: 0.625rem;
+        font-weight: 500;
+        gap: 10px;
+        letter-spacing: 0.055em;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+
+    .featured-work__eyebrow > span {
+        background: var(--color-tertiary);
+        flex: 0 0 24px;
+        height: 1px;
+    }
+
+    .featured-work__status {
+        font-family: var(--font-mono);
+        font-size: 0.5625rem;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        line-height: 1.33;
+        text-transform: uppercase;
+    }
+
+    .featured-work__status-desktop {
+        display: none;
+    }
+
+    .featured-work__header {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 228px;
+    }
+
+    h2 {
+        font-size: clamp(2.75rem, 13.34vw, 3.25rem);
+        font-weight: 600;
+        letter-spacing: -0.0615em;
+        line-height: 0.92;
+        white-space: nowrap;
+    }
+
+    .featured-work__title-break {
+        display: none;
+    }
+
+    .featured-work__introduction {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .featured-work__statement {
+        font-size: 1.375rem;
+        font-weight: 600;
+        letter-spacing: -0.0318em;
+        line-height: 1.14;
+        max-width: 340px;
+    }
+
+    .featured-work__summary {
+        font-size: 0.8125rem;
+        letter-spacing: -0.0038em;
+        line-height: 1.45;
+    }
+
+    .featured-work__proof {
+        align-self: flex-end;
+        aspect-ratio: 304 / 494;
+        background: #00853e;
+        border: 1px solid var(--color-line);
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) 24px;
+        margin: 0;
+        overflow: hidden;
+        width: min(304px, 100%);
+    }
+
+    .featured-work__proof picture,
+    .featured-work__proof img {
+        height: 100%;
+        width: 100%;
+    }
+
+    .featured-work__proof picture {
+        min-height: 0;
+    }
+
+    .featured-work__proof img {
+        object-fit: cover;
+        object-position: center top;
+    }
+
+    figcaption {
+        background: var(--color-surface-raised);
+        border-top: 1px solid var(--color-line);
+        color: var(--color-secondary);
+        font-family: var(--font-mono);
+        font-size: 0.5625rem;
+        font-weight: 500;
+        justify-content: space-between;
+        letter-spacing: 0.039em;
+        line-height: 1.22;
+        padding-inline: 9px;
+    }
+
+    .featured-work__caption-desktop,
+    .featured-work__caption-site {
+        display: none;
+    }
+
+    .featured-work__caption-mobile {
+        text-transform: uppercase;
+    }
+
+    .featured-work__ledger {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .featured-work__facts {
+        border-top: 1px solid var(--color-line);
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        margin: 0;
+        min-height: 112px;
+        padding-top: 10px;
+    }
+
+    .featured-work__facts-row {
+        display: contents;
+    }
+
+    .featured-work__fact {
+        display: flex;
+        font-family: var(--font-mono);
+        font-size: 0.625rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        line-height: 1.4;
+    }
+
+    .featured-work__fact dt::after {
+        content: " /\00a0";
+    }
+
+    .featured-work__fact dd {
+        margin: 0;
+    }
+
+    .featured-work__cta {
+        background: var(--color-primary);
+        color: var(--color-surface-raised);
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        height: 44px;
+        justify-content: space-between;
+        letter-spacing: 0.018em;
+        line-height: 1.27;
+        padding-inline: 14px;
+        text-decoration: none;
+        transition: background-color var(--transition-fast), color var(--transition-fast);
+    }
+
+    .featured-work__cta span:last-child {
+        color: var(--color-tertiary);
+        font-size: 1rem;
+        font-weight: 500;
+        line-height: 1;
+    }
+
+    .featured-work__cta:hover {
+        background: var(--color-tertiary);
+        color: var(--color-on-tertiary);
+    }
+
+    .featured-work__cta:hover span:last-child {
+        color: currentColor;
+    }
+
+    @media (min-width: 701px) {
+        .featured-work {
+            min-height: auto;
+            padding: 72px clamp(28px, 3.34vw, 48px);
+        }
+
+        .featured-work__inner {
+            gap: clamp(20px, 1.95vw, 28px);
+            max-width: 1344px;
+        }
+
+        .featured-work__rail {
+            height: 14px;
+        }
+
+        .featured-work__eyebrow {
+            font-size: 0.6875rem;
+            gap: 12px;
+            letter-spacing: 0.064em;
+            line-height: 1.27;
+        }
+
+        .featured-work__eyebrow > span {
+            flex-basis: 34px;
+        }
+
+        .featured-work__status {
+            font-size: 0.625rem;
+            letter-spacing: 0.05em;
+            line-height: 1.4;
+        }
+
+        .featured-work__status-desktop {
+            display: inline;
+        }
+
+        .featured-work__status-mobile {
+            display: none;
+        }
+
+        .featured-work__header {
+            align-items: end;
+            display: grid;
+            gap: clamp(36px, 7vw, 124px);
+            grid-template-columns: minmax(0, 1.35fr) minmax(340px, 1fr);
+            min-height: 178px;
+        }
+
+        h2 {
+            font-size: clamp(4rem, 5.84vw, 5.25rem);
+            letter-spacing: -0.0595em;
+            line-height: 0.82;
+            white-space: normal;
+        }
+
+        .featured-work__title-break {
+            display: initial;
+        }
+
+        .featured-work__introduction {
+            gap: 14px;
+            padding-bottom: 2px;
+        }
+
+        .featured-work__statement {
+            font-size: clamp(1.5rem, 2.09vw, 1.875rem);
+            letter-spacing: -0.04em;
+            line-height: 1.12;
+            max-width: 520px;
+        }
+
+        .featured-work__summary {
+            font-size: clamp(1rem, 1.25vw, 1.125rem);
+            letter-spacing: -0.0083em;
+            line-height: 1.45;
+            max-width: 500px;
+        }
+
+        .featured-work__proof {
+            align-self: stretch;
+            aspect-ratio: 1344 / 598;
+            grid-template-rows: minmax(0, 1fr) 28px;
+            width: 100%;
+        }
+
+        .featured-work__proof img {
+            object-position: center center;
+        }
+
+        figcaption {
+            font-size: 0.625rem;
+            letter-spacing: 0.045em;
+            line-height: 1.2;
+            padding-inline: 12px;
+        }
+
+        .featured-work__caption-desktop,
+        .featured-work__caption-site {
+            display: inline;
+        }
+
+        .featured-work__caption-desktop {
+            text-transform: uppercase;
+        }
+
+        .featured-work__caption-mobile,
+        .featured-work__caption-width {
+            display: none;
+        }
+
+        .featured-work__ledger {
+            align-items: flex-start;
+            border-top: 1px solid var(--color-line);
+            flex-direction: row;
+            justify-content: space-between;
+            min-height: 150px;
+            padding-top: 18px;
+        }
+
+        .featured-work__facts {
+            border: 0;
+            gap: 16px;
+            min-height: 0;
+            padding: 0;
+            width: min(76.64%, 1030px);
+        }
+
+        .featured-work__facts-row {
+            display: grid;
+            gap: 32px;
+            grid-template-columns: minmax(0, 300px) minmax(0, 440px);
+        }
+
+        .featured-work__facts-row:last-child {
+            grid-template-columns: minmax(0, 500px) minmax(0, 440px);
+        }
+
+        .featured-work__fact {
+            font-size: 0.6875rem;
+            letter-spacing: 0.018em;
+            line-height: 1.45;
+        }
+
+        .featured-work__cta {
+            background: transparent;
+            border-bottom: 1px solid var(--color-primary);
+            color: var(--color-primary);
+            flex: 0 0 min(17.71%, 238px);
+            padding-inline: 0 2px;
+        }
+    }
+
+    @media (min-width: 701px) and (max-width: 1099px) {
+        .featured-work__ledger {
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .featured-work__facts {
+            width: 100%;
+        }
+
+        .featured-work__cta {
+            align-self: flex-end;
+            flex: none;
+            width: 238px;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .featured-work {
+            min-height: 1200px;
+            padding-block: 88px;
+        }
+    }
+
+    @media (min-width: 1400px) {
+        .featured-work__header {
+            grid-template-columns: minmax(0, 700px) minmax(0, 520px);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .featured-work__cta {
+            transition: none;
+        }
+    }
+
+    @media (max-width: 360px) {
+        .featured-work {
+            padding-inline: 16px;
+        }
+
+        h2 {
+            font-size: 2.75rem;
+        }
+
+        .featured-work__header,
+        .featured-work__facts {
+            min-height: auto;
+        }
+
+        .featured-work__fact {
+            font-size: 0.5625rem;
+        }
+    }
+</style>

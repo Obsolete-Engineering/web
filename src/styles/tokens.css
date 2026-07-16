@@ -16,8 +16,8 @@
   --color-error: #d72626;
 
   /* Typography tokens */
-  --font-sans: Inter, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "IBM Plex Mono", "Space Mono", "Courier New", monospace;
+  --font-sans: Inter, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Space Mono', 'Courier New', monospace;
 
   --type-headline-display-size: clamp(3.5rem, 9vw, 4.5rem);
   --type-headline-display-weight: 600;

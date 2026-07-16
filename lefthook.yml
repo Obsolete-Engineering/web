@@ -1,0 +1,20 @@
+min_version: 2.1.10
+
+pre-commit:
+  parallel: true
+  commands:
+    oxlint:
+      glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,astro}'
+      run: bunx oxlint --deny-warnings {staged_files}
+    oxfmt:
+      glob: >-
+        *.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,jsonc,css,scss,html,md,mdx,yaml,yml}
+      run: bunx oxfmt --check {staged_files}
+
+pre-push:
+  parallel: true
+  commands:
+    astro-check:
+      run: bun run check
+    build:
+      run: bun run build

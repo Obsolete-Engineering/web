@@ -16,9 +16,11 @@ import { headerCopy } from '../copy';
 
     <nav class="site-header__nav" aria-label={headerCopy.navAriaLabel}>
       {headerCopy.navItems.map((item) => (
-        <a class:list={{ "site-header__contact": item.accent }} href={item.href}>
+        <a class:list={{ "site-header__contact": "accent" in item && item.accent }} href={item.href}>
           {item.label}
-          {item.accent && <span class="site-header__contact-dot" aria-hidden="true"></span>}
+          {"accent" in item && item.accent && (
+            <span class="site-header__contact-dot" aria-hidden="true"></span>
+          )}
         </a>
       ))}
     </nav>

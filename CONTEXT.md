@@ -45,36 +45,28 @@ A hero in which typography and background belong to one pointer-responsive visua
 _Avoid_: Separate background effect, decorative shader panel
 
 **Warm paper field**:
-The hero’s resting state: a warm paper ground carrying a quiet, slowly changing ink-grey dither texture. Orange remains limited to brand punctuation and temporary interaction rather than becoming a constant wash.
-_Avoid_: Molten backdrop, neon field, static orange background
+The hero’s nearly flat resting state. Its print dither remains latent until interaction, and orange stays limited to brand punctuation and the temporary fluid response.
+_Avoid_: Ambient texture field, mark echo, molten backdrop, neon field, static orange background
 
 **Fluid wake**:
-A narrow orange trace created by pointer movement that displaces the dither, briefly passes through the typography, and dissolves within a few seconds.
-_Avoid_: Persistent paint stroke, cursor spotlight
+A broad, connected trail of velocity-driven fluid splats that reveals a bold temporary orange print dither, passes through the headline’s text mask, and dissolves fully within a few seconds.
+_Avoid_: Full-height pointer wipe, persistent paint stroke, cursor spotlight
 
 **Text response**:
-The local headline change under the fluid wake: orange tint with a restrained ink-orange edge split while letterforms remain stable and readable.
-_Avoid_: Glitch text, warped letterforms, full chromatic aberration
-
-**Ambient drift**:
-The field’s nearly imperceptible motion before interaction. It signals that the surface is alive without competing with the headline.
-_Avoid_: Screensaver motion, static poster as the default experience
+Reference-style text-mask compositing in which the fluid dither and bold temporary orange tint pass through stable headline glyphs without changing their geometry.
+_Avoid_: Text morphing, glitch text, warped letterforms, full chromatic aberration
 
 **Tap pulse**:
-The touch equivalent of the fluid wake: one small orange bloom that diffuses from a tap while native swipe scrolling remains uninterrupted.
+The touch equivalent of the fluid wake: one small dithered orange bloom that diffuses from a tap and passes through the headline mask while native swipe scrolling remains uninterrupted.
 _Avoid_: Touch painting, scroll-blocking drag
 
 **Hero composition**:
 The existing centred hierarchy of eyebrow, proposition, clarification, and actions. The visual surface changes around it; the message order does not.
 _Avoid_: Split hero, shader showcase with secondary copy
 
-**Mark echo**:
-The field’s abstract large-scale structure, derived from the Obsolete symbol’s soft three-lobed geometry without rendering a literal oversized logo.
-_Avoid_: Generic noise field, logo watermark
-
-**Pointer cue**:
-The fluid wake itself is the sole ambient indication of pointer movement. Standard cursors remain intact for links and controls.
-_Avoid_: Glowing custom cursor, decorative cursor dot
+**Hero pointer dot**:
+A small orange follower shown only over non-interactive hero space while the native cursor remains unchanged. It is hidden over controls, on touch input, and for reduced motion.
+_Avoid_: Custom cursor replacement, full-page cursor follower, glowing cursor
 
 **Stable masthead**:
 A transparent masthead sharing the warm paper field while its identity and navigation remain crisp, ink-coloured, and outside the shader’s text response.
@@ -85,8 +77,8 @@ The headline is the only copy layer included in the shader’s text response. Ey
 _Avoid_: Reactive body copy, colour-shifting controls
 
 **Precise fluid motion**:
-An immediate, controlled wake with soft organic edges and an approximately two-second dissolve. Pointer speed changes its strength and width within restrained limits.
-_Avoid_: Languid wash, frantic splatter, fixed digital brush
+A controlled wake with soft organic edges, slight elastic pointer follow, and a short dissolve. Smoothed pointer speed changes the connected trail’s strength and width within restrained limits.
+_Avoid_: Raw cursor stamping, exaggerated lag, languid wash, frantic splatter, fixed digital brush
 
 **Fine print dither**:
 A small ordered texture that reads like contemporary print grain at normal viewing distance rather than overt pixel art.

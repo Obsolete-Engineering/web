@@ -195,7 +195,7 @@ export const featuredWorkCopy = {
 
 const startConversationActionCopy = {
   label: 'Start a conversation',
-  href: '/contact',
+  href: '/contact#project-inquiry',
   suffix: '↗',
 } as const;
 
@@ -371,7 +371,7 @@ export const craftAppliedCaseStudyCopy = {
     body: 'Bring us the offer, platform, or idea that has outgrown the way it is currently explained.',
     action: {
       label: 'Start a project',
-      href: '/contact',
+      href: '/contact#project-inquiry',
       suffix: '↗',
     },
   },
@@ -519,7 +519,7 @@ export const heroCopy = {
   actions: {
     primary: {
       label: 'Bring us an idea',
-      href: '/contact',
+      href: '/contact#project-inquiry',
       suffix: '↗',
     },
     secondary: {

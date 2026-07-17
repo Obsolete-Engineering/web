@@ -34,7 +34,12 @@ const getScreenshotOrange = (page: Page, screenshot: Uint8Array) =>
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
     let orange = 0;
     for (let index = 0; index < pixels.length; index += 4) {
-      orange += Math.max(pixels[index] - pixels[index + 1] - 4, 0);
+      const red = pixels[index];
+      const green = pixels[index + 1];
+      const blue = pixels[index + 2];
+      if (red > 160 && red - green > 10 && green - blue > 4) {
+        orange += red - green;
+      }
     }
     return orange;
   }, Buffer.from(screenshot).toString('base64'));
@@ -76,6 +81,57 @@ const compareScreenshots = (page: Page, first: Uint8Array, second: Uint8Array) =
       return totalDifference / ((firstPixels.length / 4) * 3);
     },
     [Buffer.from(first).toString('base64'), Buffer.from(second).toString('base64')],
+  );
+
+const getMaskedResponse = (page: Page, quiet: Uint8Array, active: Uint8Array) =>
+  page.evaluate(
+    async ([quietEncoded, activeEncoded]) => {
+      const decode = async (encoded: string) => {
+        const response = await fetch(`data:image/png;base64,${encoded}`);
+        const bitmap = await createImageBitmap(await response.blob());
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Text response canvas is unavailable.');
+        context.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        return context.getImageData(0, 0, canvas.width, canvas.height).data;
+      };
+      const [quietPixels, activePixels] = await Promise.all([
+        decode(quietEncoded),
+        decode(activeEncoded),
+      ]);
+      let changedGlyphs = 0;
+      let changedPaper = 0;
+      let glyphCount = 0;
+      let glyphOrangeGain = 0;
+      let paperCount = 0;
+      for (let index = 0; index < quietPixels.length; index += 4) {
+        const quietLuminance =
+          quietPixels[index] * 0.2126 +
+          quietPixels[index + 1] * 0.7152 +
+          quietPixels[index + 2] * 0.0722;
+        const orangeGain =
+          Math.max(activePixels[index] - activePixels[index + 1], 0) -
+          Math.max(quietPixels[index] - quietPixels[index + 1], 0);
+        if (quietLuminance < 90) {
+          glyphCount += 1;
+          glyphOrangeGain += Math.max(orangeGain, 0);
+          if (orangeGain > 12) changedGlyphs += 1;
+        } else if (quietLuminance > 230) {
+          paperCount += 1;
+          if (orangeGain > 12) changedPaper += 1;
+        }
+      }
+      return {
+        changedGlyphRatio: changedGlyphs / Math.max(glyphCount, 1),
+        changedPaperRatio: changedPaper / Math.max(paperCount, 1),
+        glyphCount,
+        glyphOrangeGain: glyphOrangeGain / Math.max(glyphCount, 1),
+      };
+    },
+    [Buffer.from(quiet).toString('base64'), Buffer.from(active).toString('base64')],
   );
 
 const getTapRegionOrange = async (page: Page) =>
@@ -146,7 +202,7 @@ test('renders the approved proposition, actions, and stable masthead', async ({ 
   ).toBeVisible();
   await expect(hero.getByRole('link', { name: 'Bring us an idea' })).toHaveAttribute(
     'href',
-    '/contact',
+    '/contact#project-inquiry',
   );
   await expect(hero.getByRole('link', { name: 'See our work' })).toHaveAttribute('href', '/work');
   await expect(hero.getByRole('img')).toHaveCount(0);
@@ -269,9 +325,11 @@ test('uses a stable, non-interactive static composition for reduced motion', asy
 
   const hero = getHero(page);
   const poster = hero.locator('[data-fluid-poster]');
+  const pointerDot = hero.locator('[data-fluid-pointer-dot]');
   await expect(poster).toBeVisible();
   await expect(hero).toHaveAttribute('data-fluid-state', 'static');
-  await expect(hero.locator('[data-fluid-cursor]')).toHaveCount(0);
+  await expect(hero).not.toHaveAttribute('data-fluid-pointer-active', /.+/u);
+  await expect(pointerDot).toBeHidden();
 
   const before = await page.screenshot();
   await page.mouse.move(100, 400);
@@ -390,7 +448,7 @@ test('keeps live and fallback states within the warm-paper visual family', async
 
   expect(await compareScreenshots(livePage, reduced, noScript)).toBeLessThan(0.8);
   expect(await compareScreenshots(livePage, reduced, fallback)).toBeLessThan(0.8);
-  expect(await compareScreenshots(livePage, reduced, live)).toBeLessThan(14);
+  expect(await compareScreenshots(livePage, reduced, live)).toBeLessThan(3);
 
   const canvas = getHero(livePage).locator('canvas');
   const lostWithExtension = await canvas.evaluate((element) => {
@@ -414,7 +472,7 @@ test('keeps live and fallback states within the warm-paper visual family', async
   ]);
 });
 
-test('creates a stronger fast wake and returns to ambient after about two seconds', async ({
+test('creates a stronger fast wake and returns to quiet after about two seconds', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -436,6 +494,10 @@ test('creates a stronger fast wake and returns to ambient after about two second
 
   expect(fastWake - fastAmbient).toBeGreaterThan((slowWake - ambient) * 1.2);
   expect(fastWake).toBeGreaterThan(fastAmbient * 1.03);
+  const primaryAction = getHero(page).getByRole('link', { name: 'Bring us an idea' });
+  const primaryBox = await primaryAction.boundingBox();
+  if (!primaryBox) throw new Error('Primary hero action is not visible.');
+  await page.mouse.move(primaryBox.x + primaryBox.width / 2, primaryBox.y + primaryBox.height / 2);
   await page.evaluate(() => {
     document.dispatchEvent(new CustomEvent('home-motion-pause', { detail: { paused: false } }));
   });
@@ -447,7 +509,134 @@ test('creates a stronger fast wake and returns to ambient after about two second
   expect(Math.abs(decayed - fastAmbient)).toBeLessThan(800);
 });
 
-test('keeps ambient drift restrained and headline response local', async ({ page }) => {
+test('creates a localized broad connected trail instead of a viewport-height wipe', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await expectLiveCanvas(page);
+  await page.waitForTimeout(400);
+
+  const trailClips = Array.from({ length: 5 }, (_, index) => ({
+    x: 250 + index * 160,
+    y: 680,
+    width: 150,
+    height: 120,
+  }));
+  const quietClip = { x: 250, y: 120, width: 790, height: 120 };
+  const quietBefore = await page.screenshot({ clip: quietClip });
+  const trailBefore = await Promise.all(trailClips.map((clip) => page.screenshot({ clip })));
+
+  await page.mouse.move(260, 740);
+  const moveTrailStep = async (index: number): Promise<void> => {
+    if (index > 10) return;
+    await page.mouse.move(260 + index * 80, 740);
+    await page.waitForTimeout(20);
+    await moveTrailStep(index + 1);
+  };
+  await moveTrailStep(1);
+  await page.waitForTimeout(160);
+  await page.evaluate(() => {
+    document.dispatchEvent(new CustomEvent('home-motion-pause', { detail: { paused: true } }));
+  });
+
+  const quietAfter = await page.screenshot({ clip: quietClip });
+  const trailAfter = await Promise.all(trailClips.map((clip) => page.screenshot({ clip })));
+  const quietDifference = await compareScreenshots(page, quietBefore, quietAfter);
+  const trailDifferences = await Promise.all(
+    trailBefore.map((before, index) => compareScreenshots(page, before, trailAfter[index])),
+  );
+  const trailOrangeBefore = await Promise.all(
+    trailBefore.map((screenshot) => getScreenshotOrange(page, screenshot)),
+  );
+  const trailOrangeAfter = await Promise.all(
+    trailAfter.map((screenshot) => getScreenshotOrange(page, screenshot)),
+  );
+
+  const activeSegments = trailDifferences.map(
+    (difference, index) =>
+      difference > 1.2 && trailOrangeAfter[index] > trailOrangeBefore[index] + 4000,
+  );
+  const firstActive = activeSegments.indexOf(true);
+  const lastActive = activeSegments.lastIndexOf(true);
+  expect(activeSegments.filter(Boolean).length).toBeGreaterThanOrEqual(4);
+  expect(activeSegments.slice(firstActive, lastActive + 1).every(Boolean)).toBe(true);
+  expect(quietDifference).toBeLessThan(
+    trailDifferences.reduce((total, difference) => total + difference, 0) /
+      trailDifferences.length /
+      4,
+  );
+});
+
+test('aligns the active headline mask without splitting glyph edges', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await expectLiveCanvas(page);
+  await page.waitForTimeout(500);
+
+  const hero = getHero(page);
+  const canvas = hero.locator('[data-fluid-canvas]');
+  const heading = page.getByRole('heading', { level: 1, name: title });
+  const titleSource = hero.locator('[data-fluid-title-source]');
+  const headingBox = await heading.boundingBox();
+  if (!headingBox) throw new Error('Hero headline is not visible.');
+  const headingClip = {
+    x: Math.floor(headingBox.x),
+    y: Math.floor(headingBox.y),
+    width: Math.ceil(headingBox.width),
+    height: Math.ceil(headingBox.height),
+  };
+
+  await canvas.evaluate((element) => {
+    element.style.visibility = 'hidden';
+  });
+  await hero.locator('[data-fluid-mask-line]').evaluateAll((lines) => {
+    for (const line of lines) line.setAttribute('style', 'color: #111 !important');
+  });
+  const domHeadline = await page.screenshot({ clip: headingClip });
+  await canvas.evaluate((element) => {
+    element.style.removeProperty('visibility');
+  });
+  await hero.locator('[data-fluid-mask-line]').evaluateAll((lines) => {
+    for (const line of lines) line.removeAttribute('style');
+  });
+  await titleSource.evaluate((element) => {
+    element.style.visibility = 'hidden';
+  });
+  const quietMask = await page.screenshot({ clip: headingClip });
+  await titleSource.evaluate((element) => {
+    element.style.removeProperty('visibility');
+  });
+  expect(await compareScreenshots(page, domHeadline, quietMask)).toBeLessThan(2);
+
+  const y = headingBox.y + headingBox.height * 0.7;
+  await page.mouse.move(headingBox.x + 40, y);
+  const moveHeadlineStep = async (index: number): Promise<void> => {
+    if (index > 10) return;
+    await page.mouse.move(headingBox.x + 40 + index * ((headingBox.width - 80) / 10), y);
+    await page.waitForTimeout(20);
+    await moveHeadlineStep(index + 1);
+  };
+  await moveHeadlineStep(1);
+  await page.waitForTimeout(140);
+  await page.evaluate(() => {
+    document.dispatchEvent(new CustomEvent('home-motion-pause', { detail: { paused: true } }));
+  });
+  await titleSource.evaluate((element) => {
+    element.style.visibility = 'hidden';
+  });
+  await hero.locator('[data-fluid-pointer-dot]').evaluate((element) => {
+    element.style.visibility = 'hidden';
+  });
+  const activeMask = await page.screenshot({ clip: headingClip });
+  const response = await getMaskedResponse(page, quietMask, activeMask);
+  expect(response.glyphCount).toBeGreaterThan(1000);
+  expect(response.changedGlyphRatio).toBeGreaterThan(0.08);
+  expect(response.changedPaperRatio).toBeGreaterThan(0.03);
+  expect(response.glyphOrangeGain).toBeGreaterThan(5);
+});
+
+test('keeps the resting field quiet and the headline response local', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await expectLiveCanvas(page);
@@ -466,10 +655,12 @@ test('keeps ambient drift restrained and headline response local', async ({ page
   const stableOrangeBefore = await Promise.all(
     stableElements.map((element) => getLocatorOrange(page, element)),
   );
-  const ambientBefore = await getCanvasOrange(page);
+  await page.waitForTimeout(400);
+  const quietClip = { x: 200, y: 120, width: 1040, height: 100 };
+  const quietBefore = await page.screenshot({ clip: quietClip });
   await page.waitForTimeout(500);
-  const ambientAfter = await getCanvasOrange(page);
-  expect(Math.abs(ambientAfter - ambientBefore) / ambientBefore).toBeLessThan(0.02);
+  const quietAfter = await page.screenshot({ clip: quietClip });
+  expect(await compareScreenshots(page, quietBefore, quietAfter)).toBeLessThan(0.1);
 
   expect(beforeHeading).not.toBeNull();
   if (beforeHeading) {
@@ -499,21 +690,60 @@ test('keeps ambient drift restrained and headline response local', async ({ page
   );
   await expect(hero.locator('[data-fluid-mask-line]')).toHaveCount(3);
   await expect(hero.locator('[data-fluid-title-effect]')).toHaveCount(0);
-  const headlineInk = await hero
-    .locator('[data-fluid-mask-line]')
-    .first()
-    .evaluate((element) => getComputedStyle(element).color);
-  expect(headlineInk).toMatch(/\/ 0\.84\)|, 0\.84\)/u);
 });
 
-test('preserves native control cursors and removes custom cursor behavior', async ({ page }) => {
+test('eases a small pointer dot while preserving native control cursors', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await expectLiveCanvas(page);
+
   const hero = getHero(page);
-  await expect(hero.locator('[data-fluid-cursor]')).toHaveCount(0);
-  await expect(hero).not.toHaveAttribute('data-fluid-pointer-active', '');
-  await expect(hero).not.toHaveAttribute('data-fluid-pointer-control', '');
-  await expect(hero.getByRole('link', { name: 'Bring us an idea' })).toHaveCSS('cursor', 'pointer');
+  const pointerDot = hero.locator('[data-fluid-pointer-dot]');
+  await expect(pointerDot).toHaveAttribute('aria-hidden', 'true');
+  await expect(pointerDot).toHaveCSS('background-color', 'rgb(255, 75, 31)');
+  await expect(pointerDot).toHaveCSS('width', '8px');
+  await expect(pointerDot).toHaveCSS('height', '8px');
+
+  await page.mouse.move(180, 720);
+  await expect(hero).toHaveAttribute('data-fluid-pointer-active', 'true');
+  await expect(pointerDot).toBeVisible();
+  await page.waitForTimeout(80);
+  const start = await pointerDot.boundingBox();
+  expect(start).not.toBeNull();
+
+  await page.evaluate(() => {
+    document.dispatchEvent(new CustomEvent('home-motion-pause', { detail: { paused: true } }));
+  });
+  await page.mouse.move(1220, 720);
+  const paused = await pointerDot.boundingBox();
+  expect(paused?.x).toBeCloseTo(start?.x ?? 0, 0);
+
+  await page.evaluate(() => {
+    document.dispatchEvent(new CustomEvent('home-motion-pause', { detail: { paused: false } }));
+  });
+  await page.waitForTimeout(34);
+  const following = await pointerDot.boundingBox();
+  expect(following?.x).toBeGreaterThan((start?.x ?? 0) + 30);
+  expect(following?.x).toBeLessThan(1180);
+  await expect
+    .poll(async () => (await pointerDot.boundingBox())?.x ?? 0, { timeout: 1800 })
+    .toBeGreaterThan(1100);
+
+  const primaryAction = hero.getByRole('link', { name: 'Bring us an idea' });
+  const primaryBox = await primaryAction.boundingBox();
+  if (!primaryBox) throw new Error('Primary hero action is not visible.');
+  await page.mouse.move(primaryBox.x + primaryBox.width / 2, primaryBox.y + primaryBox.height / 2);
+  await expect(hero).not.toHaveAttribute('data-fluid-pointer-active', /.+/u);
+  await expect(pointerDot).toBeHidden();
+  expect(await hero.evaluate((element) => getComputedStyle(element).cursor)).not.toBe('none');
+  await expect(primaryAction).toHaveCSS('cursor', 'pointer');
   await expect(hero.getByRole('link', { name: 'See our work' })).toHaveCSS('cursor', 'pointer');
+
+  await page.mouse.move(180, 720);
+  await expect(hero).toHaveAttribute('data-fluid-pointer-active', 'true');
+  await page.evaluate(() => window.scrollTo(0, window.innerHeight + 300));
+  await page.mouse.move(180, 100);
+  await expect(hero).not.toHaveAttribute('data-fluid-pointer-active', /.+/u);
 });
 
 test('creates one touch tap pulse while preserving action taps and swipe scrolling', async ({
@@ -527,12 +757,13 @@ test('creates one touch tap pulse while preserving action taps and swipe scrolli
   const page = await context.newPage();
   await page.goto('/');
   await expectLiveCanvas(page);
+  await expect(getHero(page).locator('[data-fluid-pointer-dot]')).toBeHidden();
   await page.waitForTimeout(350);
 
   const ambient = await getTapRegionOrange(page);
   await page.touchscreen.tap(330, 720);
   await expect
-    .poll(() => getTapRegionOrange(page), { intervals: [16, 24, 32], timeout: 1000 })
+    .poll(() => getTapRegionOrange(page), { intervals: [16, 24, 32], timeout: 1800 })
     .toBeGreaterThan(ambient * 1.08);
 
   const session = await context.newCDPSession(page);
@@ -549,7 +780,7 @@ test('creates one touch tap pulse while preserving action taps and swipe scrolli
 
   await page.evaluate(() => window.scrollTo(0, 0));
   await Promise.all([
-    page.waitForURL('**/contact'),
+    page.waitForURL('**/contact#project-inquiry'),
     getHero(page).getByRole('link', { name: 'Bring us an idea' }).tap(),
   ]);
   await context.close();
@@ -610,6 +841,18 @@ test('pauses GPU draws after the hero leaves the viewport', async ({ page }) => 
       () => (window as typeof window & { fluidDrawCount: number }).fluidDrawCount,
     ),
   ).toBeLessThanOrEqual(1);
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(180);
+  await page.evaluate(() => {
+    (window as typeof window & { fluidDrawCount: number }).fluidDrawCount = 0;
+  });
+  await page.waitForTimeout(180);
+  expect(
+    await page.evaluate(
+      () => (window as typeof window & { fluidDrawCount: number }).fluidDrawCount,
+    ),
+  ).toBeGreaterThan(0);
 });
 
 test('pauses GPU draws while the document is hidden', async ({ page }) => {
@@ -630,6 +873,21 @@ test('pauses GPU draws while the document is hidden', async ({ page }) => {
       () => (window as typeof window & { fluidDrawCount: number }).fluidDrawCount,
     ),
   ).toBeLessThanOrEqual(1);
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'visible',
+    });
+    (window as typeof window & { fluidDrawCount: number }).fluidDrawCount = 0;
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.waitForTimeout(240);
+  expect(
+    await page.evaluate(
+      () => (window as typeof window & { fluidDrawCount: number }).fluidDrawCount,
+    ),
+  ).toBeGreaterThan(0);
 });
 
 test('keeps decorative layers out of the tab order and shows keyboard focus', async ({ page }) => {
@@ -637,6 +895,8 @@ test('keeps decorative layers out of the tab order and shows keyboard focus', as
   const hero = getHero(page);
   await expect(hero.locator('canvas')).not.toHaveAttribute('tabindex', /.+/u);
   await expect(hero.locator('[data-fluid-poster]')).toHaveAttribute('alt', '');
+  await expect(hero.locator('[data-fluid-pointer-dot]')).toHaveAttribute('aria-hidden', 'true');
+  await expect(hero.locator('[data-fluid-pointer-dot]')).not.toHaveAttribute('tabindex', /.+/u);
 
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();
@@ -645,7 +905,9 @@ test('keeps decorative layers out of the tab order and shows keyboard focus', as
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Work', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('link', { name: 'Contact', exact: true })).toBeFocused();
+  const headerContact = page.getByRole('link', { name: 'Contact', exact: true });
+  await expect(headerContact).toBeFocused();
+  await expect(headerContact).toHaveAttribute('href', '/contact');
   await page.keyboard.press('Tab');
   const primaryAction = hero.getByRole('link', { name: 'Bring us an idea' });
   await expect(primaryAction).toBeFocused();

@@ -102,7 +102,7 @@ for (const engagement of engagements) {
     await expect(result.getByText(/two revision rounds/iu)).toBeVisible();
 
     const action = result.getByRole('link', { name: 'Start a conversation' });
-    await expect(action).toHaveAttribute('href', '/contact');
+    await expect(action).toHaveAttribute('href', '/contact#project-inquiry');
     const href = await action.getAttribute('href');
     expect(href).not.toBeNull();
     if (href) expect(new URL(href, page.url()).search).toBe('');

@@ -37,26 +37,29 @@ shift.
 
 ## Art direction
 
-The resting field uses the design-system paper, surface, ink-grey, and orange
-palette. A fine ordered dither creates contemporary print texture. Three broad,
-overlapping lobes create an abstract mark echo without drawing an oversized
-logo. Ambient motion is deliberately slow and low contrast.
+The resting field is the design-system paper colour with no visible ambient
+motion, authored mark, or standing dither pattern. Orange remains limited to
+brand punctuation and temporary interaction. The live canvas and static poster
+return to the same nearly flat warm-paper state.
 
-Fine-pointer and hovering pen movement injects a narrow orange fluid wake.
-Input speed is calculated from distance over elapsed time, smoothed, capped,
-and mapped to restrained wake strength and width. Simulation dissipation uses
-elapsed time so the wake returns to the ambient field in approximately two
-seconds.
+Fine-pointer and hovering pen movement updates an eased simulation point. The
+engine injects overlapping, velocity-sensitive splats along that eased path so
+a sweep forms one broad connected orange trail with soft fluid edges rather
+than a stamped brush or viewport-height wipe. Ordered fine print dither appears
+only inside active dye, and dye dissipation returns the field fully to rest
+within a few seconds.
 
-The headline is the only reactive copy. Its semantic geometry does not move.
-The wake adds a local orange tint and an ink/orange edge response bounded to two
-CSS pixels. The eyebrow, clarification, actions, focus indicators, masthead,
-and navigation remain crisp.
+The headline is the only reactive copy. Its rendered DOM typography supplies a
+stable text mask; the active orange dither is composited through those glyphs
+without moving, warping, or edge-splitting them. The eyebrow, clarification,
+actions, focus indicators, masthead, and navigation remain crisp.
 
-Native cursors and control behaviour are preserved. A stationary primary touch
-tap on non-interactive hero space injects one pulse on release. Touch movement,
-control taps, cancelled gestures, and multi-touch do not inject fluid; no touch
-handler calls `preventDefault()`.
+A small orange pointer dot uses the same eased position over non-interactive
+hero space. It supplements the unchanged native cursor and hides over controls,
+outside the hero, for touch input, in fallback states, and for reduced motion.
+A stationary primary touch tap on non-interactive hero space injects one pulse
+on release. Touch movement, control taps, cancelled gestures, and multi-touch
+do not inject fluid; no touch handler calls `preventDefault()`.
 
 ## Accessibility and resilience
 
@@ -80,10 +83,11 @@ Drive future changes through `tests/homepage-hero.spec.ts`. Its contract covers:
 - approved content, destinations, centred responsive composition, text zoom,
   and no horizontal overflow;
 - warm-paper desktop/mobile visual baselines;
-- stable transparent ink masthead and native cursors;
-- headline-only response with stable geometry;
-- velocity-sensitive wake, approximately two-second decay, ambient restraint,
-  and touch tap pulse;
+- stable transparent ink masthead, native cursors, and the restrained eased
+  pointer dot;
+- headline-only dither compositing with stable geometry;
+- a quiet resting field, localized broad connected trail, velocity response,
+  short full decay, and touch tap pulse;
 - swipe/control/multi-touch behaviour;
 - reduced motion, no JavaScript, WebGL failure/context loss, and poster/canvas
   parity;
@@ -91,5 +95,5 @@ Drive future changes through `tests/homepage-hero.spec.ts`. Its contract covers:
 
 Run `npm run check`, `npm run lint`, `npm run format:check`, `npm run build`, and
 `npm run test:browser` before handoff. Manual review at 1440×900 and 390×844 is
-still required for dither character, mark-echo subtlety, wake feel, headline
-readability, and overall brand fit.
+still required for dither character, trail continuity, eased follow, pointer-dot
+restraint, headline readability, and overall brand fit.

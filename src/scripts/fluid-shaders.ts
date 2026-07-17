@@ -40,13 +40,15 @@ export const injectionFragment = `
   uniform vec3 uValue;
   uniform float uRadius;
   uniform float uAspect;
+  uniform float uClamp;
 
   void main() {
     vec2 offset = vUv - uPoint;
     offset.x *= uAspect;
     float influence = exp(-dot(offset, offset) / max(uRadius, 0.0001));
-    vec4 base = texture2D(uTarget, vUv);
-    gl_FragColor = base + vec4(uValue * influence, 0.0);
+    vec3 value = texture2D(uTarget, vUv).rgb + uValue * influence;
+    value = mix(value, clamp(value, 0.0, 1.0), uClamp);
+    gl_FragColor = vec4(value, 1.0);
   }
 `;
 
@@ -113,8 +115,6 @@ export const displayFragment = `
   uniform sampler2D uDye;
   uniform sampler2D uTextMask;
   uniform vec2 uCssResolution;
-  uniform vec2 uResolution;
-  uniform float uTime;
 
   float orderedDither(vec2 pixel) {
     vec2 cell = mod(floor(pixel), 4.0);
@@ -137,51 +137,24 @@ export const displayFragment = `
     return 5.0;
   }
 
-  float lobe(vec2 point, vec2 center, vec2 scale) {
-    vec2 offset = (point - center) / scale;
-    return exp(-dot(offset, offset) * 2.2);
-  }
-
   void main() {
-    float aspect = uResolution.x / max(uResolution.y, 1.0);
-    vec2 paperUv = (vUv - 0.5) * vec2(aspect, 1.0);
-    vec3 dye = texture2D(uDye, vUv).rgb;
-    float wake = clamp(dye.r, 0.0, 1.0);
-    vec2 wakeFlow = vec2(dye.r - dye.g, dye.g - dye.b) * 0.018;
-    vec2 drift = vec2(sin(uTime * 0.035), cos(uTime * 0.029)) * 0.006;
-    vec2 fieldUv = paperUv + wakeFlow + drift;
-
-    vec2 markCenter = vec2(0.04, 0.05);
-    float mark = lobe(fieldUv, markCenter + vec2(-0.22, 0.04), vec2(0.34, 0.27));
-    mark += lobe(fieldUv, markCenter + vec2(0.2, 0.05), vec2(0.34, 0.27));
-    mark += lobe(fieldUv, markCenter + vec2(0.0, -0.2), vec2(0.31, 0.3));
-    float markContour = smoothstep(0.43, 0.49, mark) - smoothstep(0.58, 0.64, mark);
-
-    float paperWave = sin(fieldUv.x * 5.1 + sin(fieldUv.y * 3.7) * 0.7) * 0.5 + 0.5;
-    float density = 0.11 + markContour * 0.19 + paperWave * 0.025;
-    density += wake * 0.12;
-    float threshold = (orderedDither(gl_FragCoord.xy) + 0.5) / 16.0;
+    float wake = clamp(texture2D(uDye, vUv).r, 0.0, 1.0);
+    float softWake = smoothstep(0.004, 0.16, wake);
+    float strongWake = smoothstep(0.035, 0.42, wake);
+    float threshold = (orderedDither(vUv * uCssResolution) + 0.5) / 16.0;
+    float density = mix(0.18, 0.72, strongWake);
     float printDot = step(threshold, density);
 
     const vec3 paper = vec3(0.957, 0.945, 0.918);
-    const vec3 surface = vec3(0.922, 0.902, 0.863);
-    const vec3 inkGrey = vec3(0.435, 0.416, 0.38);
+    const vec3 ink = vec3(0.067);
     const vec3 orange = vec3(1.0, 0.294, 0.122);
-    vec3 color = mix(paper, surface, mark * 0.045 + paperWave * 0.012);
-    color = mix(color, inkGrey, printDot * (0.075 + markContour * 0.035));
 
-    float softWake = smoothstep(0.006, 0.18, wake);
-    color = mix(color, orange, softWake * 0.48);
-    color = mix(color, paper, smoothstep(0.38, 0.8, wake) * 0.06);
+    float wakePrint = softWake * mix(0.5, 0.96, printDot);
+    vec3 color = mix(paper, orange, wakePrint);
 
-    float edgeUv = 2.0 / max(uCssResolution.x, 1.0);
-    float textCore = texture2D(uTextMask, vUv).r;
-    float textLeft = texture2D(uTextMask, vUv - vec2(edgeUv, 0.0)).r;
-    float textRight = texture2D(uTextMask, vUv + vec2(edgeUv, 0.0)).r;
-    float orangeEdge = max(textLeft - textCore, 0.0) * softWake;
-    float inkEdge = max(textRight - textCore, 0.0) * softWake;
-    color = mix(color, orange, orangeEdge * 0.32);
-    color = mix(color, vec3(0.067), inkEdge * 0.18);
+    float textMask = texture2D(uTextMask, vUv).a;
+    vec3 textColor = mix(ink, orange, softWake * mix(0.62, 1.0, printDot));
+    color = mix(color, textColor, textMask);
 
     gl_FragColor = vec4(color, 1.0);
   }

@@ -23,6 +23,8 @@ import { heroCopy } from '../copy';
     <canvas class="hero__canvas" data-fluid-canvas></canvas>
   </div>
 
+  <span class="hero__pointer-dot" aria-hidden="true" data-fluid-pointer-dot></span>
+
   <div class="hero__content">
     <div class="hero__eyebrow" data-motion="hero-eyebrow">
       <span aria-hidden="true"></span>
@@ -145,6 +147,27 @@ import { heroCopy } from '../copy';
     opacity: 1;
   }
 
+  .hero__pointer-dot {
+    background: var(--color-tertiary);
+    border-radius: 50%;
+    height: 8px;
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    transition: opacity 120ms ease-out;
+    visibility: hidden;
+    width: 8px;
+    will-change: transform;
+    z-index: 3;
+  }
+
+  .hero[data-fluid-state='live'][data-fluid-pointer-active='true'] .hero__pointer-dot {
+    opacity: 1;
+    visibility: visible;
+  }
+
   .hero__content {
     align-items: center;
     display: flex;
@@ -161,7 +184,7 @@ import { heroCopy } from '../copy';
 
   .hero__eyebrow {
     align-items: center;
-    color: var(--color-secondary);
+    color: var(--color-primary);
     display: flex;
     font-family: var(--font-mono);
     font-size: 0.6875rem;
@@ -200,7 +223,11 @@ import { heroCopy } from '../copy';
   }
 
   .hero[data-fluid-state='live'] [data-fluid-mask-line] {
-    color: color-mix(in srgb, var(--color-primary) 84%, transparent);
+    color: color-mix(in srgb, var(--color-primary) 24%, transparent);
+  }
+
+  .hero[data-fluid-state='live'] .hero__title-period {
+    color: var(--color-tertiary);
   }
 
   .hero__title-middle,
@@ -222,7 +249,7 @@ import { heroCopy } from '../copy';
   }
 
   .hero__lead {
-    color: var(--color-secondary);
+    color: var(--color-primary);
     font-size: clamp(1rem, 1.45vw, 1.22rem);
     font-weight: 400;
     letter-spacing: -0.015em;
@@ -425,9 +452,16 @@ import { heroCopy } from '../copy';
     }
   }
 
+  @media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+    .hero__pointer-dot {
+      display: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .hero__poster,
     .hero__canvas,
+    .hero__pointer-dot,
     .hero__action {
       transition: none;
     }

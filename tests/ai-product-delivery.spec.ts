@@ -39,7 +39,7 @@ test('presents the agreed AI product offer between featured work and pricing', a
   ).toBeVisible();
   await expect(section.getByRole('link', { name: 'Start a conversation' })).toHaveAttribute(
     'href',
-    '/contact',
+    '/contact#project-inquiry',
   );
 });
 

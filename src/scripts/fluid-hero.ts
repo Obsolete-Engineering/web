@@ -177,13 +177,13 @@ class FluidEngine {
   private readonly maskTexture: Texture;
   private readonly onReady: () => void;
   private readonly passes: Record<string, Pass>;
+  private readonly pointerDot: HTMLElement;
   private readonly renderer: Renderer;
   private readonly resizeObserver: ResizeObserver;
   private readonly textSource: HTMLElement;
   private readonly textureFormat: TextureFormat;
 
   private disposed = false;
-  private elapsedTime = 0;
   private frame: number | undefined;
   private frameCount = 0;
   private frameTimeTotal = 0;
@@ -192,6 +192,11 @@ class FluidEngine {
   private isSharedPaused = false;
   private lastFrameTime = 0;
   private pendingSplats: FluidSplat[] = [];
+  private pointerActive = false;
+  private pointerInitialized = false;
+  private pointerPoint: [number, number] = [0.5, 0.5];
+  private pointerSpeed = 0;
+  private pointerTarget: [number, number] = [0.5, 0.5];
   private qualityCooldown = 0;
   private qualityIndex: number;
   private targets: FluidTargets | undefined;
@@ -203,9 +208,12 @@ class FluidEngine {
     textSource: HTMLElement,
     onReady: () => void,
   ) {
+    const pointerDot = hero.querySelector<HTMLElement>('[data-fluid-pointer-dot]');
+    if (!pointerDot) throw new Error('The fluid pointer dot is unavailable.');
     this.hero = hero;
     this.canvas = canvas;
     this.textSource = textSource;
+    this.pointerDot = pointerDot;
     this.onReady = onReady;
     this.qualityIndex = window.matchMedia(MOBILE_QUERY).matches ? 1 : 0;
     this.renderer = new Renderer({
@@ -256,6 +264,25 @@ class FluidEngine {
     this.pendingSplats.push(splat);
   }
 
+  setPointerTarget(point: [number, number], speed: number) {
+    if (!this.pointerInitialized) {
+      this.pointerPoint = [...point];
+      this.pointerInitialized = true;
+    }
+    this.pointerTarget = [...point];
+    this.pointerSpeed = speed;
+    this.pointerActive = true;
+    this.hero.dataset.fluidPointerActive = 'true';
+    this.updatePointerDot();
+  }
+
+  clearPointer() {
+    this.pointerActive = false;
+    this.pointerInitialized = false;
+    this.pointerSpeed = 0;
+    delete this.hero.dataset.fluidPointerActive;
+  }
+
   setSharedPaused(isPaused: boolean) {
     this.isSharedPaused = isPaused;
     this.syncLoop();
@@ -264,6 +291,7 @@ class FluidEngine {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this.clearPointer();
     if (this.frame !== undefined) cancelAnimationFrame(this.frame);
     this.frame = undefined;
     this.resizeObserver.disconnect();
@@ -284,9 +312,7 @@ class FluidEngine {
     display: createPass(this.gl, this.geometry, displayFragment, {
       uCssResolution: { value: [1, 1] },
       uDye: { value: null },
-      uResolution: { value: [1, 1] },
       uTextMask: { value: this.maskTexture },
-      uTime: { value: 0 },
     }),
     divergence: createPass(this.gl, this.geometry, divergenceFragment, {
       uTexelSize: { value: [1, 1] },
@@ -299,6 +325,7 @@ class FluidEngine {
     }),
     injection: createPass(this.gl, this.geometry, injectionFragment, {
       uAspect: { value: 1 },
+      uClamp: { value: 0 },
       uPoint: { value: [0.5, 0.5] },
       uRadius: { value: 0.02 },
       uTarget: { value: null },
@@ -400,21 +427,30 @@ class FluidEngine {
     const scaleY = height / heroBounds.height;
     context.clearRect(0, 0, width, height);
     context.fillStyle = '#ffffff';
-    context.textAlign = 'left';
     context.textBaseline = 'middle';
 
     const lines = this.textSource.querySelectorAll<HTMLElement>('[data-fluid-mask-line]');
     for (const line of lines) {
       const bounds = line.getBoundingClientRect();
       const style = getComputedStyle(line);
-      context.font = `${style.fontWeight} ${Number(style.fontSize.replace('px', '')) * scaleY}px ${style.fontFamily}`;
-      if ('letterSpacing' in context)
-        context.letterSpacing = `${Number(style.letterSpacing) * scaleX}px`;
+      const textAlign = ['center', 'left', 'right'].includes(style.textAlign)
+        ? (style.textAlign as CanvasTextAlign)
+        : 'left';
+      let textX = bounds.left;
+      if (textAlign === 'center') textX += bounds.width / 2;
+      if (textAlign === 'right') textX = bounds.right;
+      const fontSize = Number(style.fontSize.replace('px', ''));
+      const lineHeight = Number(style.lineHeight.replace('px', ''));
+      const baselineOffset = Math.max((fontSize - lineHeight) / 2, 0);
+      context.font = `${style.fontWeight} ${fontSize * scaleY}px ${style.fontFamily}`;
+      context.textAlign = textAlign;
+      if ('letterSpacing' in context) {
+        context.letterSpacing = `${Number(style.letterSpacing.replace('px', '')) * scaleX}px`;
+      }
       context.fillText(
         line.textContent?.trim() ?? '',
-        (bounds.left - heroBounds.left) * scaleX,
-        (bounds.top - heroBounds.top + bounds.height / 2) * scaleY,
-        bounds.width * scaleX,
+        (textX - heroBounds.left) * scaleX,
+        (bounds.top - heroBounds.top + bounds.height / 2 + baselineOffset) * scaleY,
       );
     }
     this.maskTexture.image = this.maskCanvas;
@@ -427,7 +463,6 @@ class FluidEngine {
     const height = Math.max(this.hero.clientHeight, 1);
     this.renderer.setSize(width, height);
     setUniform(this.passes.display, 'uCssResolution', [width, height]);
-    setUniform(this.passes.display, 'uResolution', [this.canvas.width, this.canvas.height]);
     this.drawTextMask();
   };
 
@@ -438,6 +473,7 @@ class FluidEngine {
   private inject(target: DoubleTarget, point: number[], value: number[], radius: number) {
     const pass = this.passes.injection;
     setUniform(pass, 'uAspect', target.read.width / target.read.height);
+    setUniform(pass, 'uClamp', target === this.targets?.dye ? 1 : 0);
     setUniform(pass, 'uPoint', point);
     setUniform(pass, 'uRadius', radius);
     setUniform(pass, 'uTarget', target.read.texture);
@@ -446,13 +482,46 @@ class FluidEngine {
     target.swap();
   }
 
-  private step(delta: number, elapsedTime: number, dissipationDelta: number) {
+  private updatePointerDot() {
+    this.pointerDot.style.transform = `translate3d(${this.pointerPoint[0] * this.hero.clientWidth}px, ${(1 - this.pointerPoint[1]) * this.hero.clientHeight}px, 0) translate(-50%, -50%)`;
+  }
+
+  private advancePointer(delta: number) {
+    if (!this.pointerActive || !this.pointerInitialized) return;
+    const previous: [number, number] = [...this.pointerPoint];
+    const follow = 1 - Math.exp(-delta * 9);
+    this.pointerPoint = [
+      previous[0] + (this.pointerTarget[0] - previous[0]) * follow,
+      previous[1] + (this.pointerTarget[1] - previous[1]) * follow,
+    ];
+    this.updatePointerDot();
+
+    const deltaX = this.pointerPoint[0] - previous[0];
+    const deltaY = this.pointerPoint[1] - previous[1];
+    const distance = Math.hypot(deltaX * this.hero.clientWidth, deltaY * this.hero.clientHeight);
+    if (distance < 0.35) return;
+
+    const response = Math.min(this.pointerSpeed / MAX_POINTER_SPEED, 1);
+    const splatCount = Math.min(Math.max(Math.ceil(distance / 28), 1), 5);
+    for (let index = 1; index <= splatCount; index += 1) {
+      const progress = index / splatCount;
+      this.injectSplat({
+        point: [previous[0] + deltaX * progress, previous[1] + deltaY * progress],
+        radius: 0.0009 + response * 0.0013,
+        strength: 0.045 + response * 0.065,
+        velocity: [deltaX * 22, deltaY * 22],
+      });
+    }
+  }
+
+  private step(delta: number, dissipationDelta: number) {
     const targets = this.targets;
     if (!targets) return;
     const velocityTexel = [1 / targets.velocity.read.width, 1 / targets.velocity.read.height];
     const dyeTexel = [1 / targets.dye.read.width, 1 / targets.dye.read.height];
     const normalizedDelta = delta / MAX_DELTA_SECONDS;
     const normalizedDissipation = dissipationDelta / MAX_DELTA_SECONDS;
+    this.advancePointer(delta);
 
     const advection = this.passes.advection;
     setUniform(advection, 'uDelta', normalizedDelta);
@@ -463,28 +532,12 @@ class FluidEngine {
     this.renderPass(advection, targets.velocity.write);
     targets.velocity.swap();
 
-    setUniform(advection, 'uDissipation', Math.pow(0.965, normalizedDissipation));
+    setUniform(advection, 'uDissipation', Math.pow(0.95, normalizedDissipation));
     setUniform(advection, 'uSource', targets.dye.read.texture);
     setUniform(advection, 'uTexelSize', dyeTexel);
     setUniform(advection, 'uVelocity', targets.velocity.read.texture);
     this.renderPass(advection, targets.dye.write);
     targets.dye.swap();
-
-    const phase = elapsedTime * 0.08;
-    const ambientPoints: [number, number][] = [
-      [0.34 + Math.sin(phase * 0.83) * 0.025, 0.54 + Math.cos(phase) * 0.025],
-      [0.66 + Math.cos(phase * 0.71) * 0.025, 0.54 + Math.sin(phase) * 0.025],
-      [0.5 + Math.sin(phase * 0.59) * 0.02, 0.34 + Math.cos(phase * 0.77) * 0.025],
-    ];
-    for (const [index, point] of ambientPoints.entries()) {
-      const direction = phase + index * 2.094;
-      this.inject(
-        targets.velocity,
-        point,
-        [Math.cos(direction) * 0.045, Math.sin(direction) * 0.045, 0],
-        0.024,
-      );
-    }
 
     for (const splat of this.pendingSplats.splice(0)) {
       this.inject(
@@ -528,7 +581,6 @@ class FluidEngine {
 
     const display = this.passes.display;
     setUniform(display, 'uDye', targets.dye.read.texture);
-    setUniform(display, 'uTime', elapsedTime);
     this.renderPass(display);
   }
 
@@ -562,8 +614,7 @@ class FluidEngine {
     const dissipationDelta = Math.min(Math.max(frameDuration / 1000, 0), 0.1);
     const simulationDelta = Math.min(dissipationDelta, MAX_DELTA_SECONDS);
     this.lastFrameTime = time;
-    this.elapsedTime += dissipationDelta;
-    this.step(simulationDelta, this.elapsedTime, dissipationDelta);
+    this.step(simulationDelta, dissipationDelta);
     this.adaptQuality(frameDuration);
     if (this.warmupFrames < 3) {
       this.warmupFrames += 1;
@@ -591,8 +642,9 @@ class FluidEngine {
 
 export const mountFluidHero = (root: HTMLElement) => {
   const canvas = root.querySelector<HTMLCanvasElement>('[data-fluid-canvas]');
+  const pointerDot = root.querySelector<HTMLElement>('[data-fluid-pointer-dot]');
   const textSource = root.querySelector<HTMLElement>('[data-fluid-title-source]');
-  if (!canvas || !textSource) return () => {};
+  if (!canvas || !pointerDot || !textSource) return () => {};
 
   const controller = new AbortController();
   const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY);
@@ -607,6 +659,7 @@ export const mountFluidHero = (root: HTMLElement) => {
 
   const showFallback = (state: 'fallback' | 'static') => {
     root.dataset.fluidState = state;
+    delete root.dataset.fluidPointerActive;
     lastPointer = undefined;
   };
 
@@ -659,6 +712,7 @@ export const mountFluidHero = (root: HTMLElement) => {
     }
     if ((!finePointer.matches && event.pointerType !== 'pen') || reducedMotion.matches) return;
     if (isInteractiveTarget(event.target)) {
+      engine?.clearPointer();
       lastPointer = undefined;
       return;
     }
@@ -675,28 +729,16 @@ export const mountFluidHero = (root: HTMLElement) => {
       const deltaY = (lastPointer.y - y) / bounds.height;
       const measuredSpeed = Math.min(Math.hypot(deltaX, deltaY) / elapsed, MAX_POINTER_SPEED);
       current.speed = lastPointer.speed * 0.58 + measuredSpeed * 0.42;
-      const response = current.speed / MAX_POINTER_SPEED;
-      const distance = Math.hypot(x - lastPointer.x, y - lastPointer.y);
-      const splatCount = Math.min(Math.max(Math.ceil(distance / 36), 1), 4);
-      for (let index = 1; index <= splatCount; index += 1) {
-        const progress = index / splatCount;
-        engine?.injectSplat({
-          point: [
-            (lastPointer.x + (x - lastPointer.x) * progress) / bounds.width,
-            1 - (lastPointer.y + (y - lastPointer.y) * progress) / bounds.height,
-          ],
-          radius: 0.00012 + response * 0.00022,
-          strength: 0.055 + response * 0.065,
-          velocity: [deltaX * 24, deltaY * 24],
-        });
-      }
     }
 
+    engine?.setPointerTarget([x / bounds.width, 1 - y / bounds.height], current.speed);
     lastPointer = current;
   };
 
   const handlePointerDown = (event: PointerEvent) => {
     if (event.pointerType !== 'touch' || reducedMotion.matches) return;
+    engine?.clearPointer();
+    lastPointer = undefined;
     activeTouchPointers.add(event.pointerId);
     if (activeTouchPointers.size > 1) {
       if (touchGesture) touchGesture.multiTouch = true;
@@ -743,7 +785,9 @@ export const mountFluidHero = (root: HTMLElement) => {
   };
 
   const handlePointerLeave = (event: PointerEvent) => {
-    if (event.pointerType !== 'touch') lastPointer = undefined;
+    if (event.pointerType === 'touch') return;
+    engine?.clearPointer();
+    lastPointer = undefined;
   };
 
   const handleVisibility = () => engine?.setDocumentVisible(document.visibilityState === 'visible');

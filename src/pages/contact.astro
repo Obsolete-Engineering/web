@@ -1,13 +1,17 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { contactPageCopy } from "../copy";
 ---
 
-<BaseLayout title="Contact — Obsolete">
+<BaseLayout title={contactPageCopy.metaTitle}>
   <section class="placeholder-page" aria-labelledby="contact-title">
-    <p class="placeholder-page__eyebrow">Contact</p>
-    <h1 id="contact-title">Bring us an idea.</h1>
-    <p>Our contact details are being prepared for publication.</p>
-    <a href="/">Return home <span aria-hidden="true">→</span></a>
+    <p class="placeholder-page__eyebrow">{contactPageCopy.eyebrow}</p>
+    <h1 id="contact-title">{contactPageCopy.title}</h1>
+    <p>{contactPageCopy.body}</p>
+    <a href={contactPageCopy.returnHome.href}>
+      {contactPageCopy.returnHome.label}
+      <span aria-hidden="true">{contactPageCopy.returnHome.suffix}</span>
+    </a>
   </section>
 </BaseLayout>
 

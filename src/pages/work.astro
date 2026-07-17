@@ -1,52 +1,260 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
+import desktopImage from '../assets/img/craft-applied-desktop.jpg';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { workPageCopy as copy } from '../copy';
 ---
 
-<BaseLayout title="Work — Obsolete">
-  <section class="placeholder-page" aria-labelledby="work-title">
-    <p class="placeholder-page__eyebrow">Selected work</p>
-    <h1 id="work-title">Work worth spending time with.</h1>
-    <p>Our selected work is being prepared for publication.</p>
-    <a href="/">Return home <span aria-hidden="true">→</span></a>
+<BaseLayout title={copy.metaTitle} description={copy.metaDescription}>
+  <header class="work-index__hero">
+    <div class="work-index__inner">
+      <p class="work-index__eyebrow">
+        <span aria-hidden="true"></span>
+        {copy.eyebrow}
+      </p>
+      <div class="work-index__heading">
+        <h1>{copy.title}</h1>
+        <p>{copy.introduction}</p>
+      </div>
+    </div>
+  </header>
+
+  <section class="work-index__projects" aria-label="Published case studies">
+    <div class="work-index__inner">
+      <a class="project" href={copy.project.href} aria-label={`${copy.project.action}: ${copy.project.title}`}>
+        <div class="project__rail">
+          <span>{copy.project.index}</span>
+          <span>Design + development</span>
+        </div>
+
+        <div class="project__heading">
+          <h2>{copy.project.title}</h2>
+          <div>
+            <p class="project__statement">{copy.project.statement}</p>
+            <p class="project__summary">{copy.project.summary}</p>
+          </div>
+        </div>
+
+        <figure>
+          <img
+            src={desktopImage.src}
+            width="1440"
+            height="650"
+            alt="The Craft Applied homepage with cream typography on a deep green background."
+            loading="eager"
+            decoding="async"
+          />
+          <figcaption>
+            <span>{copy.project.action}</span>
+            <span aria-hidden="true">→</span>
+          </figcaption>
+        </figure>
+      </a>
+    </div>
   </section>
 </BaseLayout>
 
 <style>
-  .placeholder-page {
-    margin-inline: auto;
-    max-width: 900px;
-    min-height: calc(100svh - 88px);
-    padding: clamp(72px, 12vw, 160px) clamp(20px, 5vw, 48px);
+  .work-index__hero,
+  .work-index__projects {
+    padding-inline: clamp(20px, 3.34vw, 48px);
   }
 
-  .placeholder-page__eyebrow {
-    color: var(--color-secondary);
+  .work-index__inner {
+    margin-inline: auto;
+    max-width: 1344px;
+  }
+
+  .work-index__hero {
+    padding-block: clamp(56px, 8vw, 112px) clamp(80px, 10vw, 152px);
+  }
+
+  .work-index__eyebrow {
+    align-items: center;
+    border-top: 1px solid var(--color-line);
+    display: flex;
     font-family: var(--font-mono);
-    font-size: var(--type-label-md-size);
-    letter-spacing: var(--type-label-md-letter-spacing);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    gap: 12px;
+    letter-spacing: 0.055em;
+    padding-top: 14px;
     text-transform: uppercase;
   }
 
+  .work-index__eyebrow span {
+    background: var(--color-tertiary);
+    height: 1px;
+    width: 34px;
+  }
+
+  .work-index__heading {
+    align-items: end;
+    display: grid;
+    gap: clamp(48px, 9vw, 150px);
+    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+    margin-top: clamp(80px, 12vw, 180px);
+  }
+
   h1 {
-    font-size: clamp(3rem, 8vw, 7rem);
-    letter-spacing: -0.06em;
-    line-height: 0.92;
-    margin-top: 28px;
+    font-size: clamp(4.5rem, 10vw, 9rem);
+    font-weight: 600;
+    letter-spacing: -0.072em;
+    line-height: 0.82;
   }
 
-  .placeholder-page > p:not(.placeholder-page__eyebrow) {
-    font-size: clamp(1rem, 2vw, 1.25rem);
-    margin-top: 32px;
+  .work-index__heading > p {
+    color: var(--color-secondary);
+    font-size: clamp(1.125rem, 1.7vw, 1.375rem);
+    line-height: 1.5;
+    max-width: 460px;
   }
 
-  a {
-    border-bottom: 1px solid currentColor;
-    display: inline-flex;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    gap: 12px;
-    margin-top: 40px;
-    min-height: 44px;
+  .work-index__projects {
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-line);
+    padding-block: clamp(72px, 8vw, 120px);
+  }
+
+  .project {
+    display: block;
     text-decoration: none;
+  }
+
+  .project__rail {
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    justify-content: space-between;
+    letter-spacing: 0.055em;
+    padding-top: 14px;
+    text-transform: uppercase;
+  }
+
+  .project__rail span:first-child {
+    color: var(--color-tertiary);
+  }
+
+  .project__heading {
+    align-items: end;
+    display: grid;
+    gap: clamp(48px, 8vw, 132px);
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+    padding-block: clamp(52px, 7vw, 98px);
+  }
+
+  h2 {
+    font-size: clamp(3.75rem, 8vw, 7.5rem);
+    font-weight: 600;
+    letter-spacing: -0.068em;
+    line-height: 0.84;
+  }
+
+  .project__heading > div {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .project__statement {
+    font-size: clamp(1.5rem, 2.6vw, 2.25rem);
+    font-weight: 600;
+    letter-spacing: -0.045em;
+    line-height: 1.05;
+  }
+
+  .project__summary {
+    color: var(--color-secondary);
+    max-width: 520px;
+  }
+
+  figure {
+    background: #00853e;
+    border: 1px solid var(--color-line);
+    margin: 0;
+    overflow: hidden;
+  }
+
+  figure img {
+    height: auto;
+    transition: transform 400ms ease;
+    width: 100%;
+  }
+
+  figcaption {
+    align-items: center;
+    background: var(--color-surface-raised);
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    justify-content: space-between;
+    letter-spacing: 0.025em;
+    min-height: 52px;
+    padding-inline: 16px;
+  }
+
+  figcaption span:last-child {
+    color: var(--color-tertiary);
+    font-size: 1rem;
+    transition: transform var(--transition-fast);
+  }
+
+  .project:hover figure img {
+    transform: scale(1.012);
+  }
+
+  .project:hover figcaption span:last-child {
+    transform: translateX(5px);
+  }
+
+  @media (max-width: 800px) {
+    .work-index__heading,
+    .project__heading {
+      align-items: start;
+      grid-template-columns: 1fr;
+    }
+
+    .work-index__heading > p,
+    .project__heading > div {
+      max-width: 620px;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .work-index__hero {
+      padding-top: 40px;
+    }
+
+    .work-index__heading {
+      margin-top: 72px;
+    }
+
+    h1 {
+      font-size: clamp(4rem, 20vw, 5.5rem);
+    }
+
+    h2 {
+      font-size: clamp(3.75rem, 17vw, 5rem);
+    }
+
+    .project__rail span:last-child {
+      text-align: right;
+    }
+
+    figure img {
+      min-height: 300px;
+      object-fit: cover;
+      object-position: center;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    figure img,
+    figcaption span:last-child {
+      transition: none;
+    }
   }
 </style>

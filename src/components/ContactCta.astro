@@ -1,0 +1,155 @@
+---
+import { contactCtaCopy } from '../copy';
+---
+
+<section class="contact-cta" aria-labelledby="contact-cta-title">
+  <div class="contact-cta__inner">
+    <p class="contact-cta__eyebrow">
+      <span aria-hidden="true"></span>
+      {contactCtaCopy.eyebrow}
+    </p>
+
+    <div class="contact-cta__body">
+      <h2 id="contact-cta-title">{contactCtaCopy.title}</h2>
+
+      <div class="contact-cta__invitation">
+        <p>{contactCtaCopy.body}</p>
+        <a href={contactCtaCopy.action.href}>
+          <span>{contactCtaCopy.action.label}</span>
+          <span aria-hidden="true">{contactCtaCopy.action.suffix}</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .contact-cta {
+    background: var(--color-tertiary);
+    color: var(--color-on-tertiary);
+    padding: clamp(72px, 9vw, 128px) clamp(20px, 3.34vw, 48px) clamp(40px, 5vw, 72px);
+  }
+
+  .contact-cta__inner {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(64px, 10vw, 150px);
+    margin-inline: auto;
+    max-width: 1344px;
+    min-height: min(720px, 80svh);
+  }
+
+  .contact-cta__eyebrow {
+    align-items: center;
+    display: flex;
+    font-family: var(--font-mono);
+    font-size: var(--type-label-sm-size);
+    font-weight: var(--type-label-sm-weight);
+    gap: 12px;
+    letter-spacing: var(--type-label-sm-letter-spacing);
+    line-height: var(--type-label-sm-line-height);
+    text-transform: uppercase;
+  }
+
+  .contact-cta__eyebrow span {
+    background: currentColor;
+    height: 1px;
+    width: 34px;
+  }
+
+  .contact-cta__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: clamp(64px, 10vw, 144px);
+  }
+
+  h2 {
+    font-size: clamp(3.75rem, 8.4vw, 7.5rem);
+    font-weight: 600;
+    letter-spacing: -0.068em;
+    line-height: 0.88;
+    max-width: 1160px;
+  }
+
+  .contact-cta__invitation {
+    align-items: end;
+    border-top: 1px solid color-mix(in srgb, var(--color-on-tertiary) 35%, transparent);
+    display: flex;
+    gap: 48px;
+    justify-content: space-between;
+    padding-top: 20px;
+  }
+
+  .contact-cta__invitation p {
+    font-size: clamp(1rem, 1.4vw, 1.25rem);
+    letter-spacing: -0.012em;
+    line-height: 1.5;
+    max-width: 520px;
+  }
+
+  .contact-cta__invitation a {
+    align-items: center;
+    border-bottom: 1px solid currentColor;
+    display: inline-flex;
+    flex: 0 0 min(300px, 26vw);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    justify-content: space-between;
+    letter-spacing: 0.025em;
+    min-height: 48px;
+    text-decoration: none;
+    transition: padding-inline var(--transition-fast);
+  }
+
+  .contact-cta__invitation a:hover {
+    padding-inline: 8px;
+  }
+
+  .contact-cta__invitation a:focus-visible {
+    box-shadow: none;
+    outline-color: var(--color-primary);
+  }
+
+  .contact-cta__invitation a span:last-child {
+    font-size: 1rem;
+  }
+
+  @media (max-width: 700px) {
+    .contact-cta__inner {
+      gap: 64px;
+      min-height: 680px;
+    }
+
+    .contact-cta__eyebrow {
+      gap: 9px;
+    }
+
+    .contact-cta__eyebrow span {
+      width: 24px;
+    }
+
+    h2 {
+      font-size: clamp(3.25rem, 15vw, 4.25rem);
+    }
+
+    .contact-cta__invitation {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .contact-cta__invitation a {
+      flex-basis: auto;
+      width: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .contact-cta__invitation a {
+      transition: none;
+    }
+  }
+</style>

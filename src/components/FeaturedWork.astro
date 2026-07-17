@@ -1,29 +1,7 @@
 ---
 import desktopImage from "../assets/img/craft-applied-desktop.jpg";
 import mobileImage from "../assets/img/craft-applied-mobile.jpg";
-
-const project = {
-    eyebrow: "Featured work — 01",
-    status: {
-        desktop: "Design + development / Live",
-        mobile: "Live",
-    },
-    title: "Craft Applied",
-    statement: "A clearer, faster home for a multidisciplinary digital studio.",
-    summary:
-        "We designed and developed a content-rich website that turns a broad service offering into a clear journey—from capabilities and technology to selected work, editorial thinking, and contact.",
-    facts: [
-        [
-            ["Client", "Craft Applied"],
-            ["Role", "Design + development"],
-        ],
-        [
-            ["Focus", "Strategy, UX/UI, content architecture, engineering"],
-            ["Platform", "Astro, SolidJS, TailwindCSS, Plausible"],
-        ],
-    ],
-    url: "https://craftapplied.com",
-} as const;
+import { featuredWorkCopy as project } from "../copy";
 ---
 
 <section class="featured-work" id="featured-work" aria-labelledby="featured-work-title">
@@ -40,8 +18,10 @@ const project = {
         </header>
 
         <div class="featured-work__header">
-            <h2 id="featured-work-title">
-                <span>Craft</span><br class="featured-work__title-break" /><span> Applied</span>
+            <h2 id="featured-work-title" aria-label={project.title.accessible}>
+                <span aria-hidden="true">
+                    <span>{project.title.firstLine}</span><br class="featured-work__title-break" /><span>{project.title.secondLine}</span>
+                </span>
             </h2>
             <div class="featured-work__introduction">
                 <p class="featured-work__statement">{project.statement}</p>
@@ -56,16 +36,16 @@ const project = {
                     src={desktopImage.src}
                     width="1440"
                     height="650"
-                    alt="The Craft Applied homepage, with cream typography on a deep green background describing its website and application work."
+                    alt={project.imageAlt}
                     loading="lazy"
                     decoding="async"
                 />
             </picture>
             <figcaption>
-                <span class="featured-work__caption-desktop">Live project view / Desktop</span>
-                <span class="featured-work__caption-mobile">Responsive proof</span>
-                <span class="featured-work__caption-site">craftapplied.com</span>
-                <span class="featured-work__caption-width">390 px</span>
+                <span class="featured-work__caption-desktop">{project.captions.desktop}</span>
+                <span class="featured-work__caption-mobile">{project.captions.mobile}</span>
+                <span class="featured-work__caption-site">{project.captions.site}</span>
+                <span class="featured-work__caption-width">{project.captions.width}</span>
             </figcaption>
         </figure>
 
@@ -83,14 +63,23 @@ const project = {
                 ))}
             </dl>
 
-            <a
-                class="featured-work__cta"
-                href={project.url}
-                aria-label="Visit Craft Applied (external site)"
-            >
-                <span>Visit Craft Applied</span>
-                <span aria-hidden="true">↗</span>
-            </a>
+            <div class="featured-work__actions">
+                <a
+                    class="featured-work__cta featured-work__cta--primary"
+                    href={project.actions.primary.href}
+                >
+                    <span>{project.actions.primary.label}</span>
+                    <span aria-hidden="true">{project.actions.primary.suffix}</span>
+                </a>
+                <a
+                    class="featured-work__cta featured-work__cta--secondary"
+                    href={project.actions.secondary.href}
+                    aria-label={project.actions.secondary.ariaLabel}
+                >
+                    <span>{project.actions.secondary.label}</span>
+                    <span aria-hidden="true">{project.actions.secondary.suffix}</span>
+                </a>
+            </div>
         </div>
     </div>
 </section>
@@ -247,6 +236,12 @@ const project = {
         gap: 14px;
     }
 
+    .featured-work__actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
     .featured-work__facts {
         border-top: 1px solid var(--color-line);
         display: flex;
@@ -298,6 +293,12 @@ const project = {
         font-size: 1rem;
         font-weight: 500;
         line-height: 1;
+    }
+
+    .featured-work__cta--secondary {
+        background: transparent;
+        border: 1px solid var(--color-line);
+        color: var(--color-primary);
     }
 
     .featured-work__cta:hover {
@@ -452,12 +453,21 @@ const project = {
             line-height: 1.45;
         }
 
-        .featured-work__cta {
-            background: transparent;
-            border-bottom: 1px solid var(--color-primary);
-            color: var(--color-primary);
+        .featured-work__actions {
             flex: 0 0 min(17.71%, 238px);
+        }
+
+        .featured-work__cta,
+        .featured-work__cta--secondary {
+            background: transparent;
+            border: 0;
+            border-bottom: 1px solid currentColor;
+            color: var(--color-primary);
             padding-inline: 0 2px;
+        }
+
+        .featured-work__cta--secondary {
+            color: var(--color-secondary);
         }
     }
 
@@ -471,7 +481,7 @@ const project = {
             width: 100%;
         }
 
-        .featured-work__cta {
+        .featured-work__actions {
             align-self: flex-end;
             flex: none;
             width: 238px;

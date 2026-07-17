@@ -1,0 +1,282 @@
+---
+import { capabilitiesCopy } from '../copy';
+---
+
+<section class="capabilities" aria-labelledby="capabilities-title">
+  <div class="capabilities__inner">
+    <header class="capabilities__header">
+      <div class="capabilities__rail">
+        <p class="capabilities__eyebrow">
+          <span aria-hidden="true"></span>
+          {capabilitiesCopy.eyebrow}
+        </p>
+
+        <nav aria-label={capabilitiesCopy.navigationAriaLabel}>
+          {capabilitiesCopy.capabilities.map((capability) => (
+            <a href={`#${capability.id}`}>{capability.index} / {capability.label}</a>
+          ))}
+        </nav>
+      </div>
+
+      <div class="capabilities__introduction">
+        <h2 id="capabilities-title">{capabilitiesCopy.title}</h2>
+        <p>{capabilitiesCopy.introduction}</p>
+      </div>
+    </header>
+
+    <ol class="capabilities__list">
+      {capabilitiesCopy.capabilities.map((capability) => (
+        <li id={capability.id} class="capability">
+          <div class="capability__heading">
+            <span class="capability__index" aria-hidden="true">{capability.index}</span>
+            <p>{capability.label}</p>
+          </div>
+
+          <div class="capability__story">
+            <h3>{capability.title}</h3>
+            <p>{capability.description}</p>
+          </div>
+
+          <ul class="capability__details" aria-label={capability.detailsAriaLabel}>
+            {capability.details.map((detail) => <li>{detail}</li>)}
+          </ul>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .capabilities {
+    background: var(--color-surface-inverse);
+    color: var(--color-on-primary);
+    padding: clamp(72px, 8.5vw, 120px) clamp(20px, 3.34vw, 48px);
+  }
+
+  .capabilities__inner {
+    margin-inline: auto;
+    max-width: 1344px;
+  }
+
+  .capabilities__header {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(64px, 9vw, 132px);
+  }
+
+  .capabilities__rail {
+    align-items: flex-start;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .capabilities__eyebrow {
+    align-items: center;
+    display: flex;
+    font-family: var(--font-mono);
+    font-size: var(--type-label-sm-size);
+    font-weight: var(--type-label-sm-weight);
+    gap: 12px;
+    letter-spacing: var(--type-label-sm-letter-spacing);
+    line-height: var(--type-label-sm-line-height);
+    text-transform: uppercase;
+  }
+
+  .capabilities__eyebrow span {
+    background: var(--color-tertiary);
+    height: 1px;
+    width: 34px;
+  }
+
+  nav {
+    display: flex;
+    gap: clamp(18px, 3vw, 44px);
+  }
+
+  nav a {
+    color: color-mix(in srgb, var(--color-on-primary) 68%, transparent);
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+    min-height: 44px;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color var(--transition-fast);
+  }
+
+  nav a:hover {
+    color: var(--color-tertiary);
+  }
+
+  .capabilities__introduction {
+    align-items: end;
+    display: grid;
+    gap: clamp(40px, 8vw, 128px);
+    grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.75fr);
+  }
+
+  h2 {
+    font-size: clamp(3.75rem, 7.7vw, 6.875rem);
+    font-weight: 600;
+    letter-spacing: -0.065em;
+    line-height: 0.88;
+    max-width: 950px;
+  }
+
+  .capabilities__introduction > p {
+    color: color-mix(in srgb, var(--color-on-primary) 70%, transparent);
+    font-size: clamp(1rem, 1.4vw, 1.25rem);
+    letter-spacing: -0.012em;
+    line-height: 1.5;
+    max-width: 430px;
+    padding-bottom: 8px;
+  }
+
+  .capabilities__list {
+    border-top: 1px solid color-mix(in srgb, var(--color-on-primary) 22%, transparent);
+    list-style: none;
+    margin: clamp(72px, 9vw, 132px) 0 0;
+    padding: 0;
+  }
+
+  .capability {
+    align-items: start;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-on-primary) 22%, transparent);
+    display: grid;
+    gap: clamp(28px, 4vw, 64px);
+    grid-template-columns: minmax(150px, 0.55fr) minmax(320px, 1.25fr) minmax(220px, 0.65fr);
+    padding-block: clamp(36px, 5vw, 68px);
+    scroll-margin-top: 24px;
+  }
+
+  .capability__heading {
+    display: flex;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    gap: 16px;
+    letter-spacing: 0.05em;
+    line-height: 1.45;
+    text-transform: uppercase;
+  }
+
+  .capability__index {
+    color: var(--color-tertiary);
+  }
+
+  .capability__story {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  h3 {
+    font-size: clamp(2rem, 3.5vw, 3.25rem);
+    font-weight: 600;
+    letter-spacing: -0.045em;
+    line-height: 1;
+    max-width: 580px;
+  }
+
+  .capability__story p {
+    color: color-mix(in srgb, var(--color-on-primary) 68%, transparent);
+    font-size: clamp(0.9375rem, 1.15vw, 1.0625rem);
+    line-height: 1.55;
+    max-width: 560px;
+  }
+
+  .capability__details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .capability__details li {
+    align-items: center;
+    color: color-mix(in srgb, var(--color-on-primary) 76%, transparent);
+    display: flex;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    gap: 10px;
+    letter-spacing: 0.025em;
+    line-height: 1.45;
+  }
+
+  .capability__details li::before {
+    background: var(--color-tertiary);
+    content: '';
+    flex: 0 0 12px;
+    height: 1px;
+  }
+
+  @media (max-width: 860px) {
+    .capabilities__rail nav {
+      display: none;
+    }
+
+    .capabilities__introduction {
+      align-items: start;
+      grid-template-columns: 1fr;
+    }
+
+    .capability {
+      grid-template-columns: minmax(130px, 0.45fr) minmax(0, 1fr);
+    }
+
+    .capability__details {
+      grid-column: 2;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .capabilities {
+      padding-block: 68px;
+    }
+
+    .capabilities__header {
+      gap: 56px;
+    }
+
+    .capabilities__eyebrow {
+      gap: 9px;
+    }
+
+    .capabilities__eyebrow span {
+      width: 24px;
+    }
+
+    h2 {
+      font-size: clamp(3.25rem, 15vw, 4.25rem);
+    }
+
+    .capabilities__introduction {
+      gap: 28px;
+    }
+
+    .capabilities__list {
+      margin-top: 68px;
+    }
+
+    .capability {
+      gap: 24px;
+      grid-template-columns: 1fr;
+      padding-block: 36px 44px;
+    }
+
+    .capability__details {
+      grid-column: auto;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    nav a {
+      transition: none;
+    }
+  }
+</style>

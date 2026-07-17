@@ -8,6 +8,8 @@ import {
   useVideoConfig,
 } from 'remotion';
 
+import { obsoleteHeroAnimationCopy } from '../copy';
+
 export type ObsoleteHeroProps = {
   showLabels?: boolean;
   reducedMotion?: boolean;
@@ -971,7 +973,7 @@ const ReplacementEngine = ({ frame }: { frame: number }) => {
           fontSize="10"
           letterSpacing="1"
         >
-          retired slot
+          {obsoleteHeroAnimationCopy.slotLabel}
         </text>
         {[0, 1, 2].map((item) => (
           <rect
@@ -1443,19 +1445,19 @@ const Labels = ({ frame, showLabels }: { frame: number; showLabels: boolean }) =
       <MicroLabel
         x={212}
         y={190}
-        text="old way detected"
+        text={obsoleteHeroAnimationCopy.labels.oldWay}
         opacity={interpolate(frame, [0, 34, 95, 130], [0, 1, 1, 0], CLAMP)}
       />
       <MicroLabel
         x={498}
         y={162}
-        text="repairing interface"
+        text={obsoleteHeroAnimationCopy.labels.repairing}
         opacity={interpolate(frame, [92, 124, 210, 250], [0, 1, 1, 0], CLAMP)}
       />
       <MicroLabel
         x={812}
         y={202}
-        text="replacement aligned"
+        text={obsoleteHeroAnimationCopy.labels.aligned}
         opacity={interpolate(frame, [218, 248, 320, 360], [0, 1, 1, 0], CLAMP)}
       />
     </g>
@@ -1481,7 +1483,7 @@ export const ObsoleteHero = ({ showLabels = true, reducedMotion = false }: Obsol
         width="100%"
         height="100%"
         role="img"
-        aria-label="Obsolete replacement engine hero animation"
+        aria-label={obsoleteHeroAnimationCopy.ariaLabel}
       >
         <rect
           width="1200"

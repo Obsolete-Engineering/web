@@ -10,10 +10,10 @@
     "prepare": "lefthook install",
     "check": "astro check",
     "test:browser": "bun run build && playwright test",
-    "lint": "oxlint src tests playwright.config.ts --deny-warnings",
-    "lint:fix": "oxlint src tests playwright.config.ts --fix",
-    "format": "oxfmt --write src tests playwright.config.ts astro.config.mjs package.json tsconfig.json",
-    "format:check": "oxfmt --check src tests playwright.config.ts astro.config.mjs package.json tsconfig.json"
+    "lint": "oxlint src --deny-warnings",
+    "lint:fix": "oxlint src --fix",
+    "format": "oxfmt --write src astro.config.mjs package.json tsconfig.json",
+    "format:check": "oxfmt --check src astro.config.mjs package.json tsconfig.json"
   },
   "dependencies": {
     "@astrojs/react": "6.0.1",

@@ -11,6 +11,11 @@ deepened: null
 
 # Homepage GSAP and Lenis Motion System
 
+> **Hero note:** GitHub issue #3 supersedes this historical plan's references to
+> retaining a particle hero. The active homepage hero direction is documented in
+> [`docs/hero-implementation-handoff.md`](../hero-implementation-handoff.md).
+> The below-the-fold GSAP/Lenis decisions remain historical context.
+
 ## Summary
 
 Add a homepage-only motion system that gives Obsolete a controlled editorial feel: subtle desktop scroll inertia, concise one-time content reveals, a masked featured-work image treatment, and a continuous orange takeover into the Contact CTA. Use Lenis and GSAP/ScrollTrigger as progressive enhancement, preserve the existing layout and copy, simplify motion on mobile, honor reduced-motion preferences, and remove effects whenever they threaten smoothness.

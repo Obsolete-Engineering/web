@@ -47,8 +47,8 @@ const { variant = 'paper' } = Astro.props;
 
   .site-header--overlay {
     background: transparent;
-    border-bottom-color: rgb(244 241 234 / 0.16);
-    color: #f4f1ea;
+    border-bottom: 0;
+    color: var(--color-primary);
     left: 0;
     position: absolute;
     top: 0;
@@ -140,19 +140,15 @@ const { variant = 'paper' } = Astro.props;
 
   .site-header--overlay .site-header__wordmark,
   .site-header--overlay .site-header__nav a {
-    color: #f4f1ea;
-  }
-
-  .site-header--overlay .site-header__wordmark-logo {
-    filter: invert(1) brightness(1.25);
+    color: var(--color-primary);
   }
 
   .site-header--overlay .site-header__rule {
-    background: rgb(244 241 234 / 0.3);
+    background: var(--color-line);
   }
 
   .site-header--overlay .site-header__descriptor {
-    color: #bfb4ad;
+    color: var(--color-secondary);
   }
 
   @media (max-width: 900px) {

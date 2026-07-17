@@ -112,92 +112,77 @@ export const displayFragment = `
   varying vec2 vUv;
   uniform sampler2D uDye;
   uniform sampler2D uTextMask;
+  uniform vec2 uCssResolution;
   uniform vec2 uResolution;
-  uniform vec2 uPointer;
-  uniform float uPointerActive;
   uniform float uTime;
 
-  float hash(vec2 point) {
-    point = fract(point * vec2(123.34, 456.21));
-    point += dot(point, point + 45.32);
-    return fract(point.x * point.y);
+  float orderedDither(vec2 pixel) {
+    vec2 cell = mod(floor(pixel), 4.0);
+    float index = cell.x + cell.y * 4.0;
+    if (index < 0.5) return 0.0;
+    if (index < 1.5) return 8.0;
+    if (index < 2.5) return 2.0;
+    if (index < 3.5) return 10.0;
+    if (index < 4.5) return 12.0;
+    if (index < 5.5) return 4.0;
+    if (index < 6.5) return 14.0;
+    if (index < 7.5) return 6.0;
+    if (index < 8.5) return 3.0;
+    if (index < 9.5) return 11.0;
+    if (index < 10.5) return 1.0;
+    if (index < 11.5) return 9.0;
+    if (index < 12.5) return 15.0;
+    if (index < 13.5) return 7.0;
+    if (index < 14.5) return 13.0;
+    return 5.0;
   }
 
-  float noise(vec2 point) {
-    vec2 cell = floor(point);
-    vec2 local = fract(point);
-    local = local * local * (3.0 - 2.0 * local);
-    return mix(
-      mix(hash(cell), hash(cell + vec2(1.0, 0.0)), local.x),
-      mix(hash(cell + vec2(0.0, 1.0)), hash(cell + 1.0), local.x),
-      local.y
-    );
-  }
-
-  float fbm(vec2 point) {
-    float value = 0.0;
-    float amplitude = 0.52;
-    for (int octave = 0; octave < 2; octave++) {
-      value += noise(point) * amplitude;
-      point = point * 2.03 + vec2(19.1, 7.7);
-      amplitude *= 0.48;
-    }
-    return value;
-  }
-
-  vec3 palette(float heat) {
-    vec3 black = vec3(0.018, 0.016, 0.016);
-    vec3 charcoal = vec3(0.075, 0.061, 0.062);
-    vec3 oxblood = vec3(0.29, 0.055, 0.055);
-    vec3 orange = vec3(1.0, 0.225, 0.075);
-    vec3 amber = vec3(1.0, 0.58, 0.19);
-    vec3 color = mix(black, charcoal, smoothstep(0.06, 0.28, heat));
-    color = mix(color, oxblood, smoothstep(0.2, 0.54, heat));
-    color = mix(color, orange, smoothstep(0.52, 0.84, heat));
-    color = mix(color, amber, smoothstep(0.88, 1.0, heat));
-    return color;
+  float lobe(vec2 point, vec2 center, vec2 scale) {
+    vec2 offset = (point - center) / scale;
+    return exp(-dot(offset, offset) * 2.2);
   }
 
   void main() {
     float aspect = uResolution.x / max(uResolution.y, 1.0);
-    vec2 centered = (vUv - 0.5) * vec2(aspect, 1.0);
+    vec2 paperUv = (vUv - 0.5) * vec2(aspect, 1.0);
     vec3 dye = texture2D(uDye, vUv).rgb;
+    float wake = clamp(dye.r, 0.0, 1.0);
+    vec2 wakeFlow = vec2(dye.r - dye.g, dye.g - dye.b) * 0.018;
+    vec2 drift = vec2(sin(uTime * 0.035), cos(uTime * 0.029)) * 0.006;
+    vec2 fieldUv = paperUv + wakeFlow + drift;
 
-    vec2 flow = vec2(dye.r - dye.b, dye.g - dye.r) * 0.035;
-    vec2 foldedUv = vUv + flow;
-    float broad = fbm(foldedUv * vec2(2.4, 3.3) + vec2(uTime * 0.018, -uTime * 0.012));
-    float ribbons = sin(
-      foldedUv.x * 17.0 + broad * 7.5 - foldedUv.y * 6.0 + sin(foldedUv.y * 8.0) * 1.4
-    );
-    ribbons = 1.0 - abs(ribbons);
-    ribbons = pow(clamp(ribbons, 0.0, 1.0), 3.4);
+    vec2 markCenter = vec2(0.04, 0.05);
+    float mark = lobe(fieldUv, markCenter + vec2(-0.22, 0.04), vec2(0.34, 0.27));
+    mark += lobe(fieldUv, markCenter + vec2(0.2, 0.05), vec2(0.34, 0.27));
+    mark += lobe(fieldUv, markCenter + vec2(0.0, -0.2), vec2(0.31, 0.3));
+    float markContour = smoothstep(0.43, 0.49, mark) - smoothstep(0.58, 0.64, mark);
 
-    float edgeEnergy = smoothstep(0.17, 0.72, length(centered * vec2(0.72, 1.0)));
-    float dyeEnergy = clamp(dot(dye, vec3(0.48, 0.36, 0.24)), 0.0, 1.0);
-    float heat = clamp(broad * 0.34 + ribbons * 0.58 + dyeEnergy * 0.72, 0.0, 1.0);
-    heat *= mix(0.38, 1.0, edgeEnergy);
+    float paperWave = sin(fieldUv.x * 5.1 + sin(fieldUv.y * 3.7) * 0.7) * 0.5 + 0.5;
+    float density = 0.11 + markContour * 0.19 + paperWave * 0.025;
+    density += wake * 0.12;
+    float threshold = (orderedDither(gl_FragCoord.xy) + 0.5) / 16.0;
+    float printDot = step(threshold, density);
 
-    vec2 pointerOffset = (vUv - uPointer) * vec2(aspect, 1.0);
-    float pointerLight = exp(-dot(pointerOffset, pointerOffset) * 4.8) * uPointerActive;
-    heat = clamp(heat + pointerLight * 0.42, 0.0, 1.0);
+    const vec3 paper = vec3(0.957, 0.945, 0.918);
+    const vec3 surface = vec3(0.922, 0.902, 0.863);
+    const vec3 inkGrey = vec3(0.435, 0.416, 0.38);
+    const vec3 orange = vec3(1.0, 0.294, 0.122);
+    vec3 color = mix(paper, surface, mark * 0.045 + paperWave * 0.012);
+    color = mix(color, inkGrey, printDot * (0.075 + markContour * 0.035));
 
-    float calmZone = 1.0 - smoothstep(0.12, 0.56, length(centered * vec2(0.82, 1.16)));
-    heat *= mix(1.0, 0.3, calmZone);
+    float softWake = smoothstep(0.006, 0.18, wake);
+    color = mix(color, orange, softWake * 0.48);
+    color = mix(color, paper, smoothstep(0.38, 0.8, wake) * 0.06);
 
-    vec2 textWarp = (pointerOffset / (length(pointerOffset) + 0.001) * 0.007 + flow * 0.4) * pointerLight;
+    float edgeUv = 2.0 / max(uCssResolution.x, 1.0);
     float textCore = texture2D(uTextMask, vUv).r;
-    float textWarmEdge = texture2D(uTextMask, vUv + textWarp).r;
-    float textDarkEdge = texture2D(uTextMask, vUv - textWarp * 1.35).r;
-    vec3 displacedText =
-      textWarmEdge * vec3(0.24, 0.042, 0.009) +
-      textCore * vec3(0.08, 0.012, 0.004) +
-      textDarkEdge * vec3(0.045, 0.004, 0.003);
-    vec3 color = palette(heat);
-    color += displacedText * pointerLight;
-    color *= 0.92 + broad * 0.14;
+    float textLeft = texture2D(uTextMask, vUv - vec2(edgeUv, 0.0)).r;
+    float textRight = texture2D(uTextMask, vUv + vec2(edgeUv, 0.0)).r;
+    float orangeEdge = max(textLeft - textCore, 0.0) * softWake;
+    float inkEdge = max(textRight - textCore, 0.0) * softWake;
+    color = mix(color, orange, orangeEdge * 0.32);
+    color = mix(color, vec3(0.067), inkEdge * 0.18);
 
-    float vignette = smoothstep(1.05, 0.2, length(centered));
-    color *= mix(0.63, 1.0, vignette);
     gl_FragColor = vec4(color, 1.0);
   }
 `;

@@ -50,6 +50,13 @@ type TextureFormat = {
   type: GLenum;
 };
 
+type FluidSplat = {
+  point: [number, number];
+  radius: number;
+  strength: number;
+  velocity: [number, number];
+};
+
 const QUALITY_TIERS: readonly QualityTier[] = [
   {
     name: 'high',
@@ -80,6 +87,10 @@ const MOBILE_QUERY = '(max-width: 700px), (pointer: coarse)';
 const MAX_DELTA_SECONDS = 1 / 60;
 const QUALITY_SAMPLE_FRAMES = 60;
 const QUALITY_COOLDOWN_FRAMES = 120;
+const INTERACTIVE_SELECTOR = 'a, button, input, select, textarea, [role="button"]';
+const MAX_POINTER_SPEED = 1.8;
+const TAP_MOVE_TOLERANCE = 12;
+const TAP_TIME_LIMIT = 500;
 
 const createDoubleTarget = (createTarget: () => RenderTarget): DoubleTarget => {
   const target = {
@@ -180,8 +191,7 @@ class FluidEngine {
   private isHeroVisible = true;
   private isSharedPaused = false;
   private lastFrameTime = 0;
-  private pointer = [0.5, 0.5];
-  private pointerActive = 0;
+  private pendingSplats: FluidSplat[] = [];
   private qualityCooldown = 0;
   private qualityIndex: number;
   private targets: FluidTargets | undefined;
@@ -241,10 +251,9 @@ class FluidEngine {
     this.syncLoop();
   }
 
-  setPointer(x: number, y: number, active: boolean) {
-    this.pointer[0] += (x - this.pointer[0]) * 0.38;
-    this.pointer[1] += (y - this.pointer[1]) * 0.38;
-    this.pointerActive = active ? 1 : 0;
+  injectSplat(splat: FluidSplat) {
+    if (this.pendingSplats.length >= 32) this.pendingSplats.shift();
+    this.pendingSplats.push(splat);
   }
 
   setSharedPaused(isPaused: boolean) {
@@ -273,9 +282,8 @@ class FluidEngine {
       uVelocity: { value: null },
     }),
     display: createPass(this.gl, this.geometry, displayFragment, {
+      uCssResolution: { value: [1, 1] },
       uDye: { value: null },
-      uPointer: { value: this.pointer },
-      uPointerActive: { value: 0 },
       uResolution: { value: [1, 1] },
       uTextMask: { value: this.maskTexture },
       uTime: { value: 0 },
@@ -303,14 +311,18 @@ class FluidEngine {
     }),
   });
 
-  private readonly createTarget = (width: number, height: number) => {
+  private readonly createTarget = (
+    width: number,
+    height: number,
+    filter: GLenum = this.gl.NEAREST,
+  ) => {
     const target = new RenderTarget(this.gl, {
       depth: false,
       format: this.textureFormat.format,
       height,
       internalFormat: this.textureFormat.internalFormat,
-      magFilter: this.gl.NEAREST,
-      minFilter: this.gl.NEAREST,
+      magFilter: filter,
+      minFilter: filter,
       stencil: false,
       type: this.textureFormat.type,
       width,
@@ -347,7 +359,8 @@ class FluidEngine {
     const dyeWidth = Math.round(quality.dyeResolution * aspect);
     const createSimulationTarget = () =>
       this.createTarget(simulationWidth, quality.simulationResolution);
-    const createDyeTarget = () => this.createTarget(dyeWidth, quality.dyeResolution);
+    const createDyeTarget = () =>
+      this.createTarget(dyeWidth, quality.dyeResolution, this.gl.LINEAR);
     this.targets = {
       divergence: createSimulationTarget(),
       dye: createDoubleTarget(createDyeTarget),
@@ -387,17 +400,19 @@ class FluidEngine {
     const scaleY = height / heroBounds.height;
     context.clearRect(0, 0, width, height);
     context.fillStyle = '#ffffff';
-    context.textAlign = 'center';
+    context.textAlign = 'left';
     context.textBaseline = 'middle';
 
-    const lines = this.textSource.querySelectorAll<HTMLElement>('h1 .hero__title-line');
+    const lines = this.textSource.querySelectorAll<HTMLElement>('[data-fluid-mask-line]');
     for (const line of lines) {
       const bounds = line.getBoundingClientRect();
       const style = getComputedStyle(line);
       context.font = `${style.fontWeight} ${Number(style.fontSize.replace('px', '')) * scaleY}px ${style.fontFamily}`;
+      if ('letterSpacing' in context)
+        context.letterSpacing = `${Number(style.letterSpacing) * scaleX}px`;
       context.fillText(
         line.textContent?.trim() ?? '',
-        (bounds.left - heroBounds.left + bounds.width / 2) * scaleX,
+        (bounds.left - heroBounds.left) * scaleX,
         (bounds.top - heroBounds.top + bounds.height / 2) * scaleY,
         bounds.width * scaleX,
       );
@@ -411,6 +426,7 @@ class FluidEngine {
     const width = Math.max(this.hero.clientWidth, 1);
     const height = Math.max(this.hero.clientHeight, 1);
     this.renderer.setSize(width, height);
+    setUniform(this.passes.display, 'uCssResolution', [width, height]);
     setUniform(this.passes.display, 'uResolution', [this.canvas.width, this.canvas.height]);
     this.drawTextMask();
   };
@@ -430,46 +446,60 @@ class FluidEngine {
     target.swap();
   }
 
-  private step(delta: number, elapsedTime: number) {
+  private step(delta: number, elapsedTime: number, dissipationDelta: number) {
     const targets = this.targets;
     if (!targets) return;
     const velocityTexel = [1 / targets.velocity.read.width, 1 / targets.velocity.read.height];
     const dyeTexel = [1 / targets.dye.read.width, 1 / targets.dye.read.height];
     const normalizedDelta = delta / MAX_DELTA_SECONDS;
+    const normalizedDissipation = dissipationDelta / MAX_DELTA_SECONDS;
 
     const advection = this.passes.advection;
     setUniform(advection, 'uDelta', normalizedDelta);
-    setUniform(advection, 'uDissipation', 0.986);
+    setUniform(advection, 'uDissipation', Math.pow(0.94, normalizedDissipation));
     setUniform(advection, 'uSource', targets.velocity.read.texture);
     setUniform(advection, 'uTexelSize', velocityTexel);
     setUniform(advection, 'uVelocity', targets.velocity.read.texture);
     this.renderPass(advection, targets.velocity.write);
     targets.velocity.swap();
 
-    setUniform(advection, 'uDissipation', 0.994);
+    setUniform(advection, 'uDissipation', Math.pow(0.965, normalizedDissipation));
     setUniform(advection, 'uSource', targets.dye.read.texture);
     setUniform(advection, 'uTexelSize', dyeTexel);
     setUniform(advection, 'uVelocity', targets.velocity.read.texture);
     this.renderPass(advection, targets.dye.write);
     targets.dye.swap();
 
-    const phase = elapsedTime * 0.11;
-    const firstPoint = [0.17 + Math.sin(phase * 0.83) * 0.08, 0.66 + Math.cos(phase) * 0.2];
-    const secondPoint = [0.83 + Math.cos(phase * 0.71) * 0.07, 0.34 + Math.sin(phase) * 0.21];
-    this.inject(
-      targets.velocity,
-      firstPoint,
-      [Math.cos(phase) * 0.36, Math.sin(phase * 0.87) * 0.28, 0],
-      0.018,
-    );
-    this.inject(
-      targets.velocity,
-      secondPoint,
-      [-Math.sin(phase * 0.9) * 0.32, Math.cos(phase * 0.72) * 0.26, 0],
-      0.02,
-    );
-    this.inject(targets.dye, firstPoint, [0.017, 0.0022, 0.0012], 0.034);
-    this.inject(targets.dye, secondPoint, [0.01, 0.0015, 0.0032], 0.038);
+    const phase = elapsedTime * 0.08;
+    const ambientPoints: [number, number][] = [
+      [0.34 + Math.sin(phase * 0.83) * 0.025, 0.54 + Math.cos(phase) * 0.025],
+      [0.66 + Math.cos(phase * 0.71) * 0.025, 0.54 + Math.sin(phase) * 0.025],
+      [0.5 + Math.sin(phase * 0.59) * 0.02, 0.34 + Math.cos(phase * 0.77) * 0.025],
+    ];
+    for (const [index, point] of ambientPoints.entries()) {
+      const direction = phase + index * 2.094;
+      this.inject(
+        targets.velocity,
+        point,
+        [Math.cos(direction) * 0.045, Math.sin(direction) * 0.045, 0],
+        0.024,
+      );
+    }
+
+    for (const splat of this.pendingSplats.splice(0)) {
+      this.inject(
+        targets.velocity,
+        splat.point,
+        [splat.velocity[0], splat.velocity[1], 0],
+        splat.radius * 1.4,
+      );
+      this.inject(
+        targets.dye,
+        splat.point,
+        [splat.strength, splat.strength * 0.2, splat.strength * 0.045],
+        splat.radius,
+      );
+    }
 
     const divergence = this.passes.divergence;
     setUniform(divergence, 'uTexelSize', velocityTexel);
@@ -498,8 +528,6 @@ class FluidEngine {
 
     const display = this.passes.display;
     setUniform(display, 'uDye', targets.dye.read.texture);
-    setUniform(display, 'uPointer', this.pointer);
-    setUniform(display, 'uPointerActive', this.pointerActive);
     setUniform(display, 'uTime', elapsedTime);
     this.renderPass(display);
   }
@@ -531,10 +559,11 @@ class FluidEngine {
   private readonly tick = (time: number) => {
     if (this.disposed) return;
     const frameDuration = this.lastFrameTime === 0 ? 16.7 : time - this.lastFrameTime;
-    const delta = Math.min(Math.max(frameDuration / 1000, 0), MAX_DELTA_SECONDS);
+    const dissipationDelta = Math.min(Math.max(frameDuration / 1000, 0), 0.1);
+    const simulationDelta = Math.min(dissipationDelta, MAX_DELTA_SECONDS);
     this.lastFrameTime = time;
-    this.elapsedTime += delta;
-    this.step(delta, this.elapsedTime);
+    this.elapsedTime += dissipationDelta;
+    this.step(simulationDelta, this.elapsedTime, dissipationDelta);
     this.adaptQuality(frameDuration);
     if (this.warmupFrames < 3) {
       this.warmupFrames += 1;
@@ -570,12 +599,15 @@ export const mountFluidHero = (root: HTMLElement) => {
   const finePointer = window.matchMedia(FINE_POINTER_QUERY);
   let engine: FluidEngine | undefined;
   let disposed = false;
+  let lastPointer: { speed: number; time: number; x: number; y: number } | undefined;
+  let touchGesture:
+    | { id: number; moved: boolean; multiTouch: boolean; startedAt: number; x: number; y: number }
+    | undefined;
+  const activeTouchPointers = new Set<number>();
 
   const showFallback = (state: 'fallback' | 'static') => {
     root.dataset.fluidState = state;
-    root.toggleAttribute('data-fluid-pointer-active', false);
-    root.toggleAttribute('data-fluid-pointer-control', false);
-    root.toggleAttribute('data-fluid-title-active', false);
+    lastPointer = undefined;
   };
 
   const start = () => {
@@ -613,40 +645,105 @@ export const mountFluidHero = (root: HTMLElement) => {
     }
   };
 
+  const isInteractiveTarget = (target: EventTarget | null) =>
+    target instanceof Element && Boolean(target.closest(INTERACTIVE_SELECTOR));
+
   const handlePointerMove = (event: PointerEvent) => {
-    if (!finePointer.matches || reducedMotion.matches) return;
+    if (event.pointerType === 'touch') {
+      if (touchGesture?.id === event.pointerId) {
+        touchGesture.moved ||=
+          Math.hypot(event.clientX - touchGesture.x, event.clientY - touchGesture.y) >
+          TAP_MOVE_TOLERANCE;
+      }
+      return;
+    }
+    if ((!finePointer.matches && event.pointerType !== 'pen') || reducedMotion.matches) return;
+    if (isInteractiveTarget(event.target)) {
+      lastPointer = undefined;
+      return;
+    }
+
     const bounds = root.getBoundingClientRect();
+    if (bounds.width <= 0 || bounds.height <= 0) return;
     const x = Math.min(Math.max(event.clientX - bounds.left, 0), bounds.width);
     const y = Math.min(Math.max(event.clientY - bounds.top, 0), bounds.height);
-    const target = event.target instanceof Element ? event.target : null;
-    const overControl = Boolean(
-      target?.closest('a, button, input, select, textarea, [role="button"]'),
-    );
-    root.style.setProperty('--fluid-pointer-x', `${x}px`);
-    root.style.setProperty('--fluid-pointer-y', `${y}px`);
-    root.toggleAttribute('data-fluid-pointer-active', !overControl);
-    root.toggleAttribute('data-fluid-pointer-control', overControl);
-    engine?.setPointer(x / bounds.width, 1 - y / bounds.height, !overControl);
+    const current = { speed: lastPointer?.speed ?? 0, time: event.timeStamp, x, y };
 
-    const titleBounds = textSource.getBoundingClientRect();
-    const overTitle =
-      !overControl &&
-      event.clientX >= titleBounds.left &&
-      event.clientX <= titleBounds.right &&
-      event.clientY >= titleBounds.top &&
-      event.clientY <= titleBounds.bottom;
-    root.toggleAttribute('data-fluid-title-active', overTitle);
-    if (overTitle) {
-      root.style.setProperty('--fluid-title-x', `${event.clientX - titleBounds.left}px`);
-      root.style.setProperty('--fluid-title-y', `${event.clientY - titleBounds.top}px`);
+    if (lastPointer) {
+      const elapsed = Math.max((event.timeStamp - lastPointer.time) / 1000, 0.008);
+      const deltaX = (x - lastPointer.x) / bounds.width;
+      const deltaY = (lastPointer.y - y) / bounds.height;
+      const measuredSpeed = Math.min(Math.hypot(deltaX, deltaY) / elapsed, MAX_POINTER_SPEED);
+      current.speed = lastPointer.speed * 0.58 + measuredSpeed * 0.42;
+      const response = current.speed / MAX_POINTER_SPEED;
+      const distance = Math.hypot(x - lastPointer.x, y - lastPointer.y);
+      const splatCount = Math.min(Math.max(Math.ceil(distance / 36), 1), 4);
+      for (let index = 1; index <= splatCount; index += 1) {
+        const progress = index / splatCount;
+        engine?.injectSplat({
+          point: [
+            (lastPointer.x + (x - lastPointer.x) * progress) / bounds.width,
+            1 - (lastPointer.y + (y - lastPointer.y) * progress) / bounds.height,
+          ],
+          radius: 0.00012 + response * 0.00022,
+          strength: 0.055 + response * 0.065,
+          velocity: [deltaX * 24, deltaY * 24],
+        });
+      }
     }
+
+    lastPointer = current;
   };
 
-  const handlePointerLeave = () => {
-    root.toggleAttribute('data-fluid-pointer-active', false);
-    root.toggleAttribute('data-fluid-pointer-control', false);
-    root.toggleAttribute('data-fluid-title-active', false);
-    engine?.setPointer(0.5, 0.5, false);
+  const handlePointerDown = (event: PointerEvent) => {
+    if (event.pointerType !== 'touch' || reducedMotion.matches) return;
+    activeTouchPointers.add(event.pointerId);
+    if (activeTouchPointers.size > 1) {
+      if (touchGesture) touchGesture.multiTouch = true;
+      return;
+    }
+    if (isInteractiveTarget(event.target)) return;
+    touchGesture = {
+      id: event.pointerId,
+      moved: false,
+      multiTouch: false,
+      startedAt: event.timeStamp,
+      x: event.clientX,
+      y: event.clientY,
+    };
+  };
+
+  const finishTouch = (event: PointerEvent, cancelled: boolean) => {
+    if (event.pointerType !== 'touch') return;
+    activeTouchPointers.delete(event.pointerId);
+    if (touchGesture?.id !== event.pointerId) return;
+    const gesture = touchGesture;
+    touchGesture = undefined;
+    if (
+      cancelled ||
+      gesture.moved ||
+      gesture.multiTouch ||
+      reducedMotion.matches ||
+      event.timeStamp - gesture.startedAt > TAP_TIME_LIMIT
+    ) {
+      return;
+    }
+
+    const bounds = root.getBoundingClientRect();
+    if (bounds.width <= 0 || bounds.height <= 0) return;
+    engine?.injectSplat({
+      point: [
+        Math.min(Math.max(gesture.x - bounds.left, 0), bounds.width) / bounds.width,
+        1 - Math.min(Math.max(gesture.y - bounds.top, 0), bounds.height) / bounds.height,
+      ],
+      radius: 0.0012,
+      strength: 0.16,
+      velocity: [0, 0],
+    });
+  };
+
+  const handlePointerLeave = (event: PointerEvent) => {
+    if (event.pointerType !== 'touch') lastPointer = undefined;
   };
 
   const handleVisibility = () => engine?.setDocumentVisible(document.visibilityState === 'visible');
@@ -670,11 +767,26 @@ export const mountFluidHero = (root: HTMLElement) => {
   intersectionObserver.observe(root);
 
   reducedMotion.addEventListener('change', handleMotionPreference, { signal: controller.signal });
+  root.addEventListener('pointerdown', handlePointerDown, {
+    passive: true,
+    signal: controller.signal,
+  });
   root.addEventListener('pointermove', handlePointerMove, {
     passive: true,
     signal: controller.signal,
   });
-  root.addEventListener('pointerleave', handlePointerLeave, { signal: controller.signal });
+  root.addEventListener('pointerup', (event) => finishTouch(event, false), {
+    passive: true,
+    signal: controller.signal,
+  });
+  root.addEventListener('pointercancel', (event) => finishTouch(event, true), {
+    passive: true,
+    signal: controller.signal,
+  });
+  root.addEventListener('pointerleave', handlePointerLeave, {
+    passive: true,
+    signal: controller.signal,
+  });
   canvas.addEventListener('webglcontextlost', handleContextLost, { signal: controller.signal });
   canvas.addEventListener('webglcontextrestored', handleContextRestored, {
     signal: controller.signal,
@@ -691,8 +803,7 @@ export const mountFluidHero = (root: HTMLElement) => {
     intersectionObserver.disconnect();
     engine?.dispose();
     engine = undefined;
-    root.toggleAttribute('data-fluid-pointer-active', false);
-    root.toggleAttribute('data-fluid-pointer-control', false);
-    root.toggleAttribute('data-fluid-title-active', false);
+    activeTouchPointers.clear();
+    touchGesture = undefined;
   };
 };

@@ -28,9 +28,17 @@ _Avoid_: Model tuning, maintenance-only support
 A delivery cycle that establishes AI fit, tests the product with real users and representative data, prepares it for dependable use, and learns from production evidence.
 _Avoid_: AI implementation pipeline, one-off prototype
 
+**Applied AI product engineering**:
+The discipline of turning existing AI capabilities into dependable product behavior, rather than researching or training foundation models.
+_Avoid_: Foundation-model research, model lab
+
 **Creative product team**:
 A team that owns a customer-facing digital product and values distinctiveness as much as utility.
 _Avoid_: Any business, companies exploring AI
+
+**Interactive process field**:
+A warm-paper, ink-line diagram that connects AI product outcomes to the AI product judgment loop through restrained pointer and focus responses, using orange only for active connections and remaining understandable without interaction.
+_Avoid_: Fake chat interface, neural-network motif, decorative node map
 
 **Integrated hero surface**:
 A hero in which typography and background belong to one pointer-responsive visual field. The interaction may affect both, but the message remains continuously legible.

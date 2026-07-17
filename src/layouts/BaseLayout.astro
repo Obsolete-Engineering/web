@@ -1,5 +1,6 @@
 ---
 import { Font } from 'astro:assets';
+import logo from '../assets/img/logo.png';
 import Header from '../components/Header.astro';
 import { accessibilityCopy, metaCopy } from '../copy';
 import '../styles/global.css';
@@ -43,8 +44,7 @@ const structuredData = {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" href={logo.src} />
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />

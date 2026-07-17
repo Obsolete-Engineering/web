@@ -10,5 +10,5 @@
   "sortImports": true,
   "sortPackageJson": true,
   "embeddedLanguageFormatting": "auto",
-  "ignorePatterns": [".astro/**", "dist/**", "public/**"]
+  "ignorePatterns": [".agents/skills/**", ".astro/**", "dist/**", "public/**"]
 }

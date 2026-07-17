@@ -6,11 +6,13 @@ import '../styles/global.css';
 interface Props {
   title?: string;
   description?: string;
+  headerVariant?: 'overlay' | 'paper';
 }
 
 const {
   title = metaCopy.title,
   description = metaCopy.description,
+  headerVariant = 'paper',
 } = Astro.props;
 ---
 
@@ -30,7 +32,7 @@ const {
   </head>
   <body>
     <a class="skip-link" href="#content">{accessibilityCopy.skipLink}</a>
-    <Header />
+    <Header variant={headerVariant} />
     <main id="content">
       <slot />
     </main>

@@ -1,9 +1,19 @@
 ---
 import logoUrl from '../assets/img/logo.png';
 import { headerCopy } from '../copy';
+
+interface Props {
+  variant?: 'overlay' | 'paper';
+}
+
+const { variant = 'paper' } = Astro.props;
 ---
 
-<header class="site-header" aria-label={headerCopy.ariaLabel}>
+<header
+  class:list={['site-header', { 'site-header--overlay': variant === 'overlay' }]}
+  aria-label={headerCopy.ariaLabel}
+  data-header-variant={variant}
+>
   <div class="site-header__inner">
     <div class="site-header__identity">
       <a class="site-header__wordmark" href="/" aria-label={headerCopy.wordmarkAriaLabel}>
@@ -32,6 +42,17 @@ import { headerCopy } from '../copy';
     background: var(--color-neutral);
     border-bottom: 1px solid var(--color-line);
     color: var(--color-primary);
+  }
+
+  .site-header--overlay {
+    background: transparent;
+    border-bottom-color: rgb(244 241 234 / 0.16);
+    color: #f4f1ea;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 20;
   }
 
   .site-header__inner {
@@ -114,6 +135,30 @@ import { headerCopy } from '../copy';
     border-radius: 50%;
     height: 7px;
     width: 7px;
+  }
+
+  .site-header--overlay .site-header__wordmark,
+  .site-header--overlay .site-header__nav a {
+    color: #f4f1ea;
+  }
+
+  .site-header--overlay .site-header__wordmark-logo {
+    filter: invert(1) brightness(1.25);
+  }
+
+  .site-header--overlay .site-header__rule {
+    background: rgb(244 241 234 / 0.3);
+  }
+
+  .site-header--overlay .site-header__descriptor {
+    color: #bfb4ad;
+  }
+
+  @media (max-width: 900px) {
+    .site-header__rule,
+    .site-header__descriptor {
+      display: none;
+    }
   }
 
   @media (max-width: 700px) {

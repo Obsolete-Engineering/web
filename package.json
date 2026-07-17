@@ -9,10 +9,11 @@
     "astro": "astro",
     "prepare": "lefthook install",
     "check": "astro check",
-    "lint": "oxlint src --deny-warnings",
-    "lint:fix": "oxlint src --fix",
-    "format": "oxfmt --write src astro.config.mjs package.json tsconfig.json",
-    "format:check": "oxfmt --check src astro.config.mjs package.json tsconfig.json"
+    "test:browser": "bun run build && playwright test",
+    "lint": "oxlint src tests playwright.config.ts --deny-warnings",
+    "lint:fix": "oxlint src tests playwright.config.ts --fix",
+    "format": "oxfmt --write src tests playwright.config.ts astro.config.mjs package.json tsconfig.json",
+    "format:check": "oxfmt --check src tests playwright.config.ts astro.config.mjs package.json tsconfig.json"
   },
   "dependencies": {
     "@astrojs/react": "6.0.1",
@@ -21,12 +22,14 @@
     "@types/react-dom": "^19.2.3",
     "@vercel/analytics": "^2.0.1",
     "astro": "^7.0.6",
+    "ogl": "^1.0.11",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.484"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
+    "@playwright/test": "^1.61.1",
     "lefthook": "^2.1.10",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.74.0",

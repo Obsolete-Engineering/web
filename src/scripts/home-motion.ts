@@ -178,6 +178,48 @@ const setupFeaturedWork = (root: HTMLElement, isDesktop: boolean, revealed: Set<
   }
 };
 
+const setupAIProductDelivery = (root: HTMLElement, isDesktop: boolean, revealed: Set<string>) => {
+  const section = select<HTMLElement>(root, '[data-motion-section="ai-delivery"]');
+  if (!section) return;
+
+  const copyTargets = selectAll<HTMLElement>(section, '[data-motion="ai-delivery-copy"]');
+  const field = select<HTMLElement>(section, '[data-motion="ai-delivery-field"]');
+
+  if (copyTargets.length > 0 && !revealed.has('ai-delivery-copy')) {
+    gsap.from(copyTargets, {
+      opacity: 0,
+      clipPath: 'inset(0 0 100% 0)',
+      duration: isDesktop ? 0.72 : 0.48,
+      ease: 'power3.out',
+      stagger: isDesktop ? 0.09 : 0.055,
+      y: isDesktop ? 28 : 16,
+      scrollTrigger: {
+        trigger: section,
+        start: isDesktop ? 'top 74%' : 'top 84%',
+        once: true,
+        onEnter: () => revealed.add('ai-delivery-copy'),
+      },
+      onComplete: () => gsap.set(copyTargets, { clearProps: 'all' }),
+    });
+  }
+
+  if (field && !revealed.has('ai-delivery-field')) {
+    gsap.from(field, {
+      opacity: 0,
+      duration: isDesktop ? 0.68 : 0.46,
+      ease: 'power2.out',
+      y: isDesktop ? 28 : 16,
+      scrollTrigger: {
+        trigger: field,
+        start: isDesktop ? 'top 84%' : 'top 90%',
+        once: true,
+        onEnter: () => revealed.add('ai-delivery-field'),
+      },
+      onComplete: () => gsap.set(field, { clearProps: 'all' }),
+    });
+  }
+};
+
 const setupCapabilities = (root: HTMLElement, isDesktop: boolean, revealed: Set<string>) => {
   const section = select<HTMLElement>(root, '[data-motion-section="capabilities"]');
   if (!section) return;
@@ -294,6 +336,7 @@ export const initHomeMotion = () => {
         setupHeroEntrance(root, isDesktop, revealed);
         setupFeaturedWork(root, isDesktop, revealed);
         setupCapabilities(root, isDesktop, revealed);
+        setupAIProductDelivery(root, isDesktop, revealed);
         setupContactTakeover(root, isDesktop, revealed);
       }, root);
       const cleanupLenis = isDesktop ? setupLenis() : undefined;

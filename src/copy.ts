@@ -377,6 +377,77 @@ export const craftAppliedCaseStudyCopy = {
   },
 } as const;
 
+export const aiProductDeliveryCopy = {
+  eyebrow: 'AI product delivery',
+  audience: 'For creative product teams',
+  title: 'AI should earn its place.',
+  introduction:
+    'We find where AI can make a product meaningfully more useful, then design, engineer, launch, and improve it for real-world use.',
+  principle:
+    'Sometimes the most useful answer is not to use AI. We test that before asking anyone to invest in it.',
+  outcomesLabel: 'AI product outcomes',
+  outcomes: [
+    {
+      index: '01',
+      id: 'find',
+      label: 'Find',
+      title: 'Make the right thing easier to discover.',
+      description:
+        'Help people find the right information, idea, or next step inside material too large or complex to navigate alone.',
+    },
+    {
+      index: '02',
+      id: 'decide',
+      label: 'Decide',
+      title: 'Turn complexity into useful choices.',
+      description:
+        'Bring scattered signals into clear context while keeping judgment with the person making the decision.',
+    },
+    {
+      index: '03',
+      id: 'create',
+      label: 'Create',
+      title: 'Give people better ways to make.',
+      description:
+        'Build purposeful tools for drafting, adapting, and exploring without reducing the product to a content machine.',
+    },
+  ],
+  outcomeAction: 'Through the judgment loop',
+  process: {
+    eyebrow: 'The judgment loop',
+    title: 'From useful idea to dependable product.',
+    steps: [
+      {
+        index: '01',
+        title: 'Establish the fit',
+        description:
+          'Start with the user outcome. Test whether AI improves it enough to justify the added uncertainty.',
+      },
+      {
+        index: '02',
+        title: 'Prove the behavior',
+        description:
+          'Prototype with real users and representative data. Learn where the experience helps, fails, and needs human control.',
+      },
+      {
+        index: '03',
+        title: 'Engineer dependable use',
+        description:
+          'Build the interface, evaluations, safeguards, privacy boundaries, and failure handling around the intended use.',
+      },
+      {
+        index: '04',
+        title: 'Launch and improve',
+        description:
+          'Observe real use, then refine the product’s value, behavior, and safeguards as evidence accumulates.',
+      },
+    ],
+  },
+  scope:
+    'AI product engagements are scoped after we understand the opportunity, data, risk, and operating needs.',
+  action: startConversationActionCopy,
+} as const;
+
 export const capabilitiesCopy = {
   eyebrow: 'What we make',
   title: 'From first thought to finished thing.',

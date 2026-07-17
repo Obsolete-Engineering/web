@@ -1,0 +1,152 @@
+import { expect, test } from '@playwright/test';
+
+const getFormSection = (page: import('@playwright/test').Page) =>
+  page.getByRole('region', { name: 'Give us the shape of it.' });
+
+test('places the qualified project inquiry below the contact hero', async ({ page }) => {
+  await page.goto('/contact');
+
+  const hero = page.getByRole('region', { name: 'Bring us an idea.' });
+  const formSection = getFormSection(page);
+
+  await expect(hero).toBeVisible();
+  await expect(formSection).toBeVisible();
+  expect(
+    await hero.evaluate(
+      (heroElement, formElement) =>
+        Boolean(
+          heroElement.compareDocumentPosition(formElement as Node) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+        ),
+      await formSection.elementHandle(),
+    ),
+  ).toBe(true);
+
+  await expect(formSection.getByLabel('Your name')).toBeVisible();
+  await expect(formSection.getByLabel('Email')).toBeVisible();
+  await expect(formSection.getByLabel('Company / organization')).toBeVisible();
+  await expect(formSection.getByRole('checkbox', { name: 'Direction' })).toBeVisible();
+  await expect(formSection.getByRole('checkbox', { name: 'Design' })).toBeVisible();
+  await expect(formSection.getByRole('checkbox', { name: 'Engineering' })).toBeVisible();
+  await expect(formSection.getByRole('checkbox', { name: 'Not sure yet' })).toBeVisible();
+  await expect(formSection.getByLabel('Tell us about the idea')).toBeVisible();
+  await expect(
+    formSection.getByRole('button', { name: 'Indicative investment', exact: true }),
+  ).toBeVisible();
+  await expect(
+    formSection.getByRole('button', { name: 'When would you like to begin?', exact: true }),
+  ).toBeVisible();
+  await expect(formSection.getByRole('button', { name: 'Send the idea' })).toBeVisible();
+
+  await expect(
+    formSection.locator('input[type="tel"], input[type="url"], input[type="file"]'),
+  ).toHaveCount(0);
+});
+
+test('validates required fields with Valibot and focuses the first error', async ({ page }) => {
+  await page.goto('/contact');
+  const formSection = getFormSection(page);
+
+  await formSection.getByRole('button', { name: 'Send the idea' }).click();
+
+  await expect(formSection.getByRole('alert')).toHaveText(
+    'Check the highlighted fields and try again.',
+  );
+  await expect(formSection.getByLabel('Your name')).toBeFocused();
+  await expect(formSection.getByText('Tell us your name.')).toBeVisible();
+  await expect(formSection.getByText('Tell us where we can reply.')).toBeVisible();
+  await expect(
+    formSection.getByText('Choose at least one area, or select Not sure yet.'),
+  ).toBeVisible();
+  await expect(formSection.getByText('Give us a little context about the idea.')).toBeVisible();
+
+  await formSection.getByLabel('Your name').fill('Ada Lovelace');
+  await formSection.getByLabel('Email').fill('not-an-email');
+  await formSection.getByRole('button', { name: 'Send the idea' }).click();
+
+  await expect(formSection.getByText('Tell us your name.')).toHaveCount(0);
+  await expect(formSection.getByText('Enter a valid email address.')).toBeVisible();
+  await expect(formSection.getByLabel('Email')).toBeFocused();
+});
+
+test('keeps Not sure yet exclusive within the capability multi-select', async ({ page }) => {
+  await page.goto('/contact');
+  const formSection = getFormSection(page);
+  const design = formSection.getByRole('checkbox', { name: 'Design' });
+  const engineering = formSection.getByRole('checkbox', { name: 'Engineering' });
+  const notSure = formSection.getByRole('checkbox', { name: 'Not sure yet' });
+
+  await design.click();
+  await expect(design).toHaveAttribute('data-state', 'checked');
+
+  await notSure.click();
+  await expect(notSure).toHaveAttribute('data-state', 'checked');
+  await expect(design).toHaveAttribute('data-state', 'unchecked');
+
+  await engineering.click();
+  await expect(engineering).toHaveAttribute('data-state', 'checked');
+  await expect(notSure).toHaveAttribute('data-state', 'unchecked');
+});
+
+test('supports optional Bits UI selects and shows an honest prototype notice', async ({ page }) => {
+  await page.goto('/contact');
+  const formSection = getFormSection(page);
+
+  await formSection.getByLabel('Your name').fill('Ada Lovelace');
+  await formSection.getByLabel('Email').fill('ada@example.com');
+  await formSection.getByLabel('Company / organization').fill('Analytical Engines');
+  await formSection.getByRole('checkbox', { name: 'Direction' }).click();
+  await formSection
+    .getByLabel('Tell us about the idea')
+    .fill('A digital experience that helps people understand an ambitious new machine.');
+
+  const budget = formSection.getByRole('button', {
+    name: 'Indicative investment',
+    exact: true,
+  });
+  await budget.click();
+  await page.getByRole('option', { name: '£10–25k' }).click();
+  await expect(budget).toContainText('£10–25k');
+
+  const startWindow = formSection.getByRole('button', {
+    name: 'When would you like to begin?',
+    exact: true,
+  });
+  await startWindow.click();
+  await page.getByRole('option', { name: 'In 1–3 months' }).click();
+  await expect(startWindow).toContainText('In 1–3 months');
+
+  await formSection.getByRole('button', { name: 'Send the idea' }).click();
+
+  const notice = formSection.getByRole('status');
+  await expect(notice).toBeFocused();
+  await expect(notice).toContainText('Prototype only.');
+  await expect(notice).toContainText('This form is a preview. Nothing has been sent or stored.');
+  await expect(page).toHaveURL(/\/contact$/u);
+});
+
+test('stays usable without horizontal overflow on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/contact');
+  const formSection = getFormSection(page);
+
+  await expect(formSection).toBeVisible();
+  const checkboxBoxes = await Promise.all(
+    ['Direction', 'Design', 'Engineering', 'Not sure yet'].map((name) =>
+      formSection.getByRole('checkbox', { name }).boundingBox(),
+    ),
+  );
+  for (const box of checkboxBoxes) {
+    expect(box?.width).toBeGreaterThanOrEqual(24);
+    expect(box?.height).toBeGreaterThanOrEqual(24);
+  }
+
+  const submitBox = await formSection.getByRole('button', { name: 'Send the idea' }).boundingBox();
+  expect(submitBox?.height).toBeGreaterThanOrEqual(48);
+
+  const overflow = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+});

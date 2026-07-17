@@ -1,5 +1,6 @@
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
+import svelte from '@astrojs/svelte';
 // @ts-check
 import { defineConfig, fontProviders } from 'astro/config';
 
@@ -30,7 +31,7 @@ export default defineConfig({
       fallbacks: ['monospace'],
     },
   ],
-  integrations: [react(), sitemap()],
+  integrations: [react(), svelte(), sitemap()],
   vite: {
     resolve: {
       dedupe: ['@remotion/player', 'react', 'react-dom', 'remotion'],

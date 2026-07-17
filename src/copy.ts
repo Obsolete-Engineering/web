@@ -48,11 +48,101 @@ export const contactPageCopy = {
     'Contact Obsolete to discuss an ambitious digital experience, creative technology project, or complex idea.',
   eyebrow: 'Contact',
   title: 'Bring us an idea.',
-  body: 'Our contact details are being prepared for publication.',
-  returnHome: {
-    label: 'Return home',
-    href: '/',
-    suffix: '→',
+  body: 'Early sketch, complicated brief, or fully formed plan. Tell us what makes it interesting.',
+  imageAlt:
+    'An abstract architectural composition in warm stone, black, and orange with precise geometric markings.',
+  formAction: {
+    label: 'Start the inquiry',
+    href: '#project-inquiry',
+    suffix: '↓',
+  },
+  form: {
+    eyebrow: 'Project inquiry / 01',
+    title: 'Give us the shape of it.',
+    introduction:
+      'A few useful details help us understand the idea, where you need support, and whether we are the right fit.',
+    requiredLabel: 'Required',
+    optionalLabel: 'Optional',
+    fields: {
+      name: {
+        label: 'Your name',
+        autocomplete: 'name',
+      },
+      email: {
+        label: 'Email',
+        autocomplete: 'email',
+      },
+      organization: {
+        label: 'Company / organization',
+        autocomplete: 'organization',
+      },
+      capabilities: {
+        label: 'What do you need?',
+        help: 'Choose as many as apply.',
+        options: [
+          {
+            value: 'direction',
+            label: 'Direction',
+            description: 'Clarify the creative and technical direction.',
+          },
+          {
+            value: 'design',
+            label: 'Design',
+            description: 'Shape the interface, system, and interaction.',
+          },
+          {
+            value: 'engineering',
+            label: 'Engineering',
+            description: 'Build the difficult part properly.',
+          },
+          {
+            value: 'not-sure',
+            label: 'Not sure yet',
+            description: 'We can work it out together.',
+          },
+        ],
+      },
+      idea: {
+        label: 'Tell us about the idea',
+        help: 'What are you hoping to make, who is it for, and why does it matter?',
+      },
+      budget: {
+        label: 'Indicative investment',
+        placeholder: 'Choose a range',
+        options: [
+          { value: 'under-5k', label: 'Under £5k' },
+          { value: '5k-10k', label: '£5–10k' },
+          { value: '10k-25k', label: '£10–25k' },
+          { value: '25k-50k', label: '£25–50k' },
+          { value: '50k-plus', label: '£50k+' },
+          { value: 'not-sure', label: 'Not sure yet' },
+        ],
+      },
+      startWindow: {
+        label: 'When would you like to begin?',
+        placeholder: 'Choose a window',
+        options: [
+          { value: 'asap', label: 'As soon as possible' },
+          { value: '1-3-months', label: 'In 1–3 months' },
+          { value: '3-6-months', label: 'In 3–6 months' },
+          { value: '6-plus-months', label: 'In 6+ months' },
+          { value: 'flexible', label: 'Flexible' },
+        ],
+      },
+    },
+    submitLabel: 'Send the idea',
+    validation: {
+      summary: 'Check the highlighted fields and try again.',
+      name: 'Tell us your name.',
+      emailRequired: 'Tell us where we can reply.',
+      emailInvalid: 'Enter a valid email address.',
+      capabilities: 'Choose at least one area, or select Not sure yet.',
+      idea: 'Give us a little context about the idea.',
+    },
+    prototypeNotice: {
+      title: 'Prototype only.',
+      body: 'This form is a preview. Nothing has been sent or stored.',
+    },
   },
 } as const;
 

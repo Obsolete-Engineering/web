@@ -1,59 +1,232 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
-import { contactPageCopy } from "../copy";
+import { Image } from 'astro:assets';
+import contactImage from '../assets/img/obsolete/mali1.png';
+import ContactForm from '../components/ContactForm.svelte';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { contactPageCopy } from '../copy';
 ---
 
 <BaseLayout
   title={contactPageCopy.metaTitle}
   description={contactPageCopy.metaDescription}
+  image={contactImage.src}
+  imageAlt={contactPageCopy.imageAlt}
 >
-  <section class="placeholder-page" aria-labelledby="contact-title">
-    <p class="placeholder-page__eyebrow">{contactPageCopy.eyebrow}</p>
-    <h1 id="contact-title">{contactPageCopy.title}</h1>
-    <p>{contactPageCopy.body}</p>
-    <a href={contactPageCopy.returnHome.href}>
-      {contactPageCopy.returnHome.label}
-      <span aria-hidden="true">{contactPageCopy.returnHome.suffix}</span>
-    </a>
+  <section class="contact-page" aria-labelledby="contact-title">
+    <div class="contact-page__inner">
+      <div class="contact-page__copy">
+        <p class="contact-page__eyebrow">
+          <span aria-hidden="true"></span>
+          {contactPageCopy.eyebrow}
+        </p>
+
+        <h1 id="contact-title">{contactPageCopy.title}</h1>
+
+        <div class="contact-page__invitation">
+          <p>{contactPageCopy.body}</p>
+          <a href={contactPageCopy.formAction.href}>
+            <span>{contactPageCopy.formAction.label}</span>
+            <span aria-hidden="true">{contactPageCopy.formAction.suffix}</span>
+          </a>
+        </div>
+      </div>
+
+      <figure>
+        <div class="contact-page__art">
+          <Image
+            src={contactImage}
+            alt={contactPageCopy.imageAlt}
+            layout="full-width"
+            loading="eager"
+            fetchpriority="high"
+          />
+        </div>
+        <figcaption>
+          <span>Visual study / 01</span>
+          <span>Idea → form</span>
+        </figcaption>
+      </figure>
+    </div>
   </section>
+
+  <ContactForm client:load />
 </BaseLayout>
 
 <style>
-  .placeholder-page {
-    margin-inline: auto;
-    max-width: 900px;
-    min-height: calc(100svh - 88px);
-    padding: clamp(72px, 12vw, 160px) clamp(20px, 5vw, 48px);
+  .contact-page {
+    padding: clamp(32px, 4vw, 64px) clamp(20px, 3.34vw, 48px) clamp(48px, 6vw, 88px);
   }
 
-  .placeholder-page__eyebrow {
-    color: var(--color-secondary);
+  .contact-page__inner {
+    display: grid;
+    gap: clamp(40px, 6vw, 96px);
+    grid-template-columns: minmax(0, 0.95fr) minmax(420px, 0.75fr);
+    margin-inline: auto;
+    max-width: 1344px;
+  }
+
+  .contact-page__copy {
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    flex-direction: column;
+    min-height: clamp(620px, calc(100svh - 152px), 820px);
+    padding-top: 14px;
+  }
+
+  .contact-page__eyebrow {
+    align-items: center;
+    display: flex;
     font-family: var(--font-mono);
-    font-size: var(--type-label-md-size);
-    letter-spacing: var(--type-label-md-letter-spacing);
+    font-size: var(--type-label-sm-size);
+    font-weight: var(--type-label-sm-weight);
+    gap: 12px;
+    letter-spacing: var(--type-label-sm-letter-spacing);
+    line-height: var(--type-label-sm-line-height);
     text-transform: uppercase;
   }
 
+  .contact-page__eyebrow span {
+    background: var(--color-tertiary);
+    height: 1px;
+    width: 34px;
+  }
+
   h1 {
-    font-size: clamp(3rem, 8vw, 7rem);
-    letter-spacing: -0.06em;
-    line-height: 0.92;
-    margin-top: 28px;
+    font-size: clamp(4.5rem, 9vw, 8.75rem);
+    font-weight: 600;
+    letter-spacing: -0.072em;
+    line-height: 0.82;
+    margin-top: clamp(88px, 13vw, 184px);
+    max-width: 720px;
   }
 
-  .placeholder-page > p:not(.placeholder-page__eyebrow) {
-    font-size: clamp(1rem, 2vw, 1.25rem);
-    margin-top: 32px;
+  .contact-page__invitation {
+    align-items: end;
+    border-top: 1px solid var(--color-line);
+    display: grid;
+    gap: 32px;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.55fr);
+    margin-top: auto;
+    padding-top: 20px;
   }
 
-  a {
+  .contact-page__invitation p {
+    color: var(--color-secondary);
+    font-size: clamp(1rem, 1.35vw, 1.1875rem);
+    line-height: 1.5;
+    max-width: 440px;
+  }
+
+  .contact-page__invitation a {
+    align-items: center;
     border-bottom: 1px solid currentColor;
     display: inline-flex;
     font-family: var(--font-mono);
     font-size: 0.75rem;
-    gap: 12px;
-    margin-top: 40px;
-    min-height: 44px;
+    font-weight: 600;
+    justify-content: space-between;
+    letter-spacing: 0.025em;
+    min-height: 48px;
     text-decoration: none;
+    transition: padding-inline var(--transition-fast);
+  }
+
+  .contact-page__invitation a:hover {
+    padding-inline: 8px;
+  }
+
+  .contact-page__invitation a span:last-child {
+    color: var(--color-tertiary);
+    font-size: 1rem;
+  }
+
+  figure {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    margin: 0;
+    min-height: clamp(620px, calc(100svh - 152px), 820px);
+    overflow: hidden;
+  }
+
+  .contact-page__art {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .contact-page__art img {
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    width: 100%;
+  }
+
+  figcaption {
+    align-items: center;
+    background: var(--color-surface-raised);
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    font-family: var(--font-mono);
+    font-size: var(--type-label-sm-size);
+    font-weight: var(--type-label-sm-weight);
+    justify-content: space-between;
+    letter-spacing: var(--type-label-sm-letter-spacing);
+    min-height: 52px;
+    padding-inline: 16px;
+    text-transform: uppercase;
+  }
+
+  figcaption span:last-child {
+    color: var(--color-secondary);
+  }
+
+  @media (max-width: 900px) {
+    .contact-page__inner {
+      gap: 64px;
+      grid-template-columns: 1fr;
+    }
+
+    .contact-page__copy {
+      min-height: 600px;
+    }
+
+    figure {
+      min-height: 0;
+    }
+
+    .contact-page__art img {
+      height: auto;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .contact-page {
+      padding-top: 24px;
+    }
+
+    .contact-page__copy {
+      min-height: 500px;
+    }
+
+    h1 {
+      font-size: clamp(4rem, 21vw, 6rem);
+      margin-top: 72px;
+    }
+
+    .contact-page__invitation {
+      align-items: stretch;
+      grid-template-columns: 1fr;
+    }
+
+    figcaption {
+      font-size: 0.625rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .contact-page__invitation a {
+      transition: none;
+    }
   }
 </style>

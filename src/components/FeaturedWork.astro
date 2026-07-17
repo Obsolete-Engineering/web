@@ -1,12 +1,13 @@
 ---
+import { Image } from "astro:assets";
 import desktopImage from "../assets/img/craft-applied-desktop.jpg";
 import mobileImage from "../assets/img/craft-applied-mobile.jpg";
 import { featuredWorkCopy as project } from "../copy";
 ---
 
-<section class="featured-work" id="featured-work" aria-labelledby="featured-work-title">
+<section class="featured-work" id="featured-work" aria-labelledby="featured-work-title" data-motion-section="featured-work">
     <div class="featured-work__inner">
-        <header class="featured-work__rail">
+        <header class="featured-work__rail" data-motion="featured-copy">
             <div class="featured-work__eyebrow">
                 <span aria-hidden="true"></span>
                 <p>{project.eyebrow}</p>
@@ -18,24 +19,22 @@ import { featuredWorkCopy as project } from "../copy";
         </header>
 
         <div class="featured-work__header">
-            <h2 id="featured-work-title" aria-label={project.title.accessible}>
+            <h2 id="featured-work-title" aria-label={project.title.accessible} data-motion="featured-copy">
                 <span aria-hidden="true">
                     <span>{project.title.firstLine}</span><br class="featured-work__title-break" /><span>{project.title.secondLine}</span>
                 </span>
             </h2>
-            <div class="featured-work__introduction">
+            <div class="featured-work__introduction" data-motion="featured-copy">
                 <p class="featured-work__statement">{project.statement}</p>
                 <p class="featured-work__summary">{project.summary}</p>
             </div>
         </div>
 
-        <figure class="featured-work__proof">
+        <figure class="featured-work__proof" data-motion="featured-proof">
             <picture>
                 <source media="(max-width: 700px)" srcset={mobileImage.src} />
-                <img
-                    src={desktopImage.src}
-                    width="1440"
-                    height="650"
+                <Image
+                    src={desktopImage}
                     alt={project.imageAlt}
                     loading="lazy"
                     decoding="async"
@@ -49,7 +48,7 @@ import { featuredWorkCopy as project } from "../copy";
             </figcaption>
         </figure>
 
-        <div class="featured-work__ledger">
+        <div class="featured-work__ledger" data-motion="featured-ledger">
             <dl class="featured-work__facts">
                 {project.facts.map((row) => (
                     <div class="featured-work__facts-row">
@@ -200,7 +199,9 @@ import { featuredWorkCopy as project } from "../copy";
     }
 
     .featured-work__proof picture {
+        display: block;
         min-height: 0;
+        overflow: hidden;
     }
 
     .featured-work__proof img {

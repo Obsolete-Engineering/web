@@ -3,7 +3,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { contactPageCopy } from "../copy";
 ---
 
-<BaseLayout title={contactPageCopy.metaTitle}>
+<BaseLayout
+  title={contactPageCopy.metaTitle}
+  description={contactPageCopy.metaDescription}
+>
   <section class="placeholder-page" aria-labelledby="contact-title">
     <p class="placeholder-page__eyebrow">{contactPageCopy.eyebrow}</p>
     <h1 id="contact-title">{contactPageCopy.title}</h1>

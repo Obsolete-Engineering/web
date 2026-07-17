@@ -2,18 +2,20 @@
 import { contactCtaCopy } from '../copy';
 ---
 
-<section class="contact-cta" aria-labelledby="contact-cta-title">
+<section class="contact-cta" aria-labelledby="contact-cta-title" data-motion-section="contact">
+  <div class="contact-cta__takeover" data-motion="contact-takeover" aria-hidden="true"></div>
+
   <div class="contact-cta__inner">
-    <p class="contact-cta__eyebrow">
+    <p class="contact-cta__eyebrow" data-motion="contact-copy">
       <span aria-hidden="true"></span>
       {contactCtaCopy.eyebrow}
     </p>
 
     <div class="contact-cta__body">
-      <h2 id="contact-cta-title">{contactCtaCopy.title}</h2>
+      <h2 id="contact-cta-title" data-motion="contact-copy">{contactCtaCopy.title}</h2>
 
       <div class="contact-cta__invitation">
-        <p>{contactCtaCopy.body}</p>
+        <p data-motion="contact-copy">{contactCtaCopy.body}</p>
         <a href={contactCtaCopy.action.href}>
           <span>{contactCtaCopy.action.label}</span>
           <span aria-hidden="true">{contactCtaCopy.action.suffix}</span>
@@ -27,10 +29,26 @@ import { contactCtaCopy } from '../copy';
   .contact-cta {
     background: var(--color-tertiary);
     color: var(--color-on-tertiary);
+    isolation: isolate;
     padding: clamp(72px, 9vw, 128px) clamp(20px, 3.34vw, 48px) clamp(40px, 5vw, 72px);
+    position: relative;
+  }
+
+  .contact-cta__takeover {
+    background: var(--color-tertiary);
+    height: clamp(96px, 14svh, 180px);
+    inset: 0 0 auto;
+    pointer-events: none;
+    position: absolute;
+    transform: translateY(-100%) scaleY(0);
+    transform-origin: bottom center;
+    will-change: transform;
+    z-index: 0;
   }
 
   .contact-cta__inner {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     gap: clamp(64px, 10vw, 150px);
@@ -118,6 +136,10 @@ import { contactCtaCopy } from '../copy';
   }
 
   @media (max-width: 700px) {
+    .contact-cta__takeover {
+      height: clamp(64px, 10svh, 96px);
+    }
+
     .contact-cta__inner {
       gap: 64px;
       min-height: 680px;

@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import logoUrl from '../assets/img/logo.png';
 import { headerCopy } from '../copy';
 
@@ -17,7 +18,7 @@ const { variant = 'paper' } = Astro.props;
   <div class="site-header__inner">
     <div class="site-header__identity">
       <a class="site-header__wordmark" href="/" aria-label={headerCopy.wordmarkAriaLabel}>
-        <img class="site-header__wordmark-logo" src={logoUrl.src} alt="" aria-hidden="true" loading="eager" />
+        <Image class="site-header__wordmark-logo" src={logoUrl} alt="" aria-hidden="true" loading="eager" />
         <span>{headerCopy.wordmark}</span>
       </a>
       <span class="site-header__rule" aria-hidden="true"></span>

@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import desktopImage from '../../assets/img/craft-applied-desktop.jpg';
 import mobileImage from '../../assets/img/craft-applied-mobile.jpg';
 import editorialImage from '../../assets/img/craft-applied/editorial.jpg';
@@ -8,7 +9,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { craftAppliedCaseStudyCopy as project } from '../../copy';
 ---
 
-<BaseLayout title={project.metaTitle} description={project.metaDescription}>
+<BaseLayout
+  title={project.metaTitle}
+  description={project.metaDescription}
+  image={desktopImage.src}
+  imageAlt={project.imageAlt}
+  type="article"
+>
   <article class="case-study">
     <header class="case-study__hero">
       <div class="case-study__inner">
@@ -54,20 +61,16 @@ import { craftAppliedCaseStudyCopy as project } from '../../copy';
 
     <figure class="case-study__hero-media">
       <div class="case-study__hero-media-inner">
-        <img
+        <Image
           class="case-study__desktop-image"
-          src={desktopImage.src}
-          width="1440"
-          height="650"
+          src={desktopImage}
           alt={project.imageAlt}
           loading="eager"
           decoding="async"
         />
-        <img
+        <Image
           class="case-study__mobile-image"
-          src={mobileImage.src}
-          width="390"
-          height="620"
+          src={mobileImage}
           alt=""
           loading="eager"
           decoding="async"
@@ -106,10 +109,8 @@ import { craftAppliedCaseStudyCopy as project } from '../../copy';
         </header>
 
         <figure class="case-study__figure">
-          <img
-            src={servicesImage.src}
-            width="1424"
-            height="900"
+          <Image
+            src={servicesImage}
             alt={project.system.imageAlt}
             loading="lazy"
             decoding="async"
@@ -144,10 +145,8 @@ import { craftAppliedCaseStudyCopy as project } from '../../copy';
         </header>
 
         <figure class="case-study__figure">
-          <img
-            src={workImage.src}
-            width="1424"
-            height="900"
+          <Image
+            src={workImage}
             alt={project.proof.imageAlt}
             loading="lazy"
             decoding="async"
@@ -172,10 +171,8 @@ import { craftAppliedCaseStudyCopy as project } from '../../copy';
         </header>
 
         <figure class="case-study__figure">
-          <img
-            src={editorialImage.src}
-            width="1424"
-            height="900"
+          <Image
+            src={editorialImage}
             alt={project.editorial.imageAlt}
             loading="lazy"
             decoding="async"
@@ -201,10 +198,8 @@ import { craftAppliedCaseStudyCopy as project } from '../../copy';
 
         <div class="accessibility-proof">
           <figure>
-            <img
-              src={mobileImage.src}
-              width="390"
-              height="620"
+            <Image
+              src={mobileImage}
               alt={project.accessibility.imageAlt}
               loading="lazy"
               decoding="async"

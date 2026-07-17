@@ -1,4 +1,5 @@
 ---
+import { Font } from 'astro:assets';
 import Header from '../components/Header.astro';
 import { accessibilityCopy, metaCopy } from '../copy';
 import '../styles/global.css';
@@ -6,14 +7,36 @@ import '../styles/global.css';
 interface Props {
   title?: string;
   description?: string;
+  image?: string;
+  imageAlt?: string;
+  type?: 'article' | 'website';
   headerVariant?: 'overlay' | 'paper';
 }
 
 const {
   title = metaCopy.title,
   description = metaCopy.description,
+  image = '/og-default.png',
+  imageAlt = metaCopy.imageAlt,
+  type = 'website',
   headerVariant = 'paper',
 } = Astro.props;
+
+const site = Astro.site ?? Astro.url;
+const canonicalURL = new URL(Astro.url.pathname, site);
+const imageURL = new URL(image, site);
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: title,
+  description,
+  url: canonicalURL.href,
+  isPartOf: {
+    '@type': 'WebSite',
+    name: metaCopy.siteName,
+    url: new URL('/', site).href,
+  },
+};
 ---
 
 <!doctype html>
@@ -25,15 +48,32 @@ const {
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <link rel="canonical" href={canonicalURL} />
+
+    <meta property="og:type" content={type} />
+    <meta property="og:site_name" content={metaCopy.siteName} />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:image" content={imageURL} />
+    <meta property="og:image:alt" content={imageAlt} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageURL} />
+    <meta name="twitter:image:alt" content={imageAlt} />
+
+    <Font cssVariable="--font-inter" preload={[{ weight: 400, style: 'normal', subset: 'latin' }]} />
+    <Font cssVariable="--font-ibm-plex-mono" />
+    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} is:inline />
     <title>{title}</title>
   </head>
   <body>
     <a class="skip-link" href="#content">{accessibilityCopy.skipLink}</a>
     <Header variant={headerVariant} />
-    <main id="content">
+    <main id="content" tabindex="-1">
       <slot />
     </main>
   </body>

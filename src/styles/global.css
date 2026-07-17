@@ -8,7 +8,7 @@ html {
   background: var(--color-neutral);
   color: var(--color-primary);
   font-family: var(--font-sans);
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 
 body {

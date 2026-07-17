@@ -1,10 +1,16 @@
 ---
+import { Image } from 'astro:assets';
 import desktopImage from '../assets/img/craft-applied-desktop.jpg';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { workPageCopy as copy } from '../copy';
 ---
 
-<BaseLayout title={copy.metaTitle} description={copy.metaDescription}>
+<BaseLayout
+  title={copy.metaTitle}
+  description={copy.metaDescription}
+  image={desktopImage.src}
+  imageAlt={copy.project.imageAlt}
+>
   <header class="work-index__hero">
     <div class="work-index__inner">
       <p class="work-index__eyebrow">
@@ -35,11 +41,9 @@ import { workPageCopy as copy } from '../copy';
         </div>
 
         <figure>
-          <img
-            src={desktopImage.src}
-            width="1440"
-            height="650"
-            alt="The Craft Applied homepage with cream typography on a deep green background."
+          <Image
+            src={desktopImage}
+            alt={copy.project.imageAlt}
             loading="eager"
             decoding="async"
           />

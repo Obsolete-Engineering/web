@@ -2,11 +2,11 @@
 import { capabilitiesCopy } from '../copy';
 ---
 
-<section class="capabilities" aria-labelledby="capabilities-title">
+<section class="capabilities" aria-labelledby="capabilities-title" data-motion-section="capabilities">
   <div class="capabilities__inner">
     <header class="capabilities__header">
       <div class="capabilities__rail">
-        <p class="capabilities__eyebrow">
+        <p class="capabilities__eyebrow" data-motion="capabilities-copy">
           <span aria-hidden="true"></span>
           {capabilitiesCopy.eyebrow}
         </p>
@@ -18,7 +18,7 @@ import { capabilitiesCopy } from '../copy';
         </nav>
       </div>
 
-      <div class="capabilities__introduction">
+      <div class="capabilities__introduction" data-motion="capabilities-copy">
         <h2 id="capabilities-title">{capabilitiesCopy.title}</h2>
         <p>{capabilitiesCopy.introduction}</p>
       </div>
@@ -26,7 +26,7 @@ import { capabilitiesCopy } from '../copy';
 
     <ol class="capabilities__list">
       {capabilitiesCopy.capabilities.map((capability) => (
-        <li id={capability.id} class="capability">
+        <li id={capability.id} class="capability" data-motion="capability-row">
           <div class="capability__heading">
             <span class="capability__index" aria-hidden="true">{capability.index}</span>
             <p>{capability.label}</p>

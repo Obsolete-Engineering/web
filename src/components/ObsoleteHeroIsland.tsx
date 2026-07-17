@@ -1,5 +1,5 @@
-import { Player } from '@remotion/player';
-import { useEffect, useState } from 'react';
+import { Player, type PlayerRef } from '@remotion/player';
+import { useEffect, useRef, useState } from 'react';
 
 import { ObsoleteParticleHero } from '../remotion/ObsoleteParticleHero';
 
@@ -12,6 +12,8 @@ const getPrefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export default function ObsoleteHeroIsland() {
+  const playerRef = useRef<PlayerRef>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [reducedMotion, setReducedMotion] = useState(getPrefersReducedMotion);
 
   useEffect(() => {
@@ -24,8 +26,52 @@ export default function ObsoleteHeroIsland() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
+  useEffect(() => {
+    const player = playerRef.current;
+    const root = rootRef.current;
+    if (!player || !root) return;
+
+    if (reducedMotion) {
+      player.pause();
+      return;
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      player.play();
+      return () => player.pause();
+    }
+
+    let isVisible = false;
+    const syncPlayback = () => {
+      if (isVisible && document.visibilityState === 'visible') {
+        player.play();
+      } else {
+        player.pause();
+      }
+    };
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const nextVisible = Boolean(entry?.isIntersecting && entry.intersectionRatio >= 0.05);
+        if (nextVisible === isVisible) return;
+        isVisible = nextVisible;
+        syncPlayback();
+      },
+      { rootMargin: '80px 0px', threshold: [0, 0.05, 0.2] },
+    );
+
+    observer.observe(root);
+    document.addEventListener('visibilitychange', syncPlayback);
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', syncPlayback);
+      player.pause();
+    };
+  }, [reducedMotion]);
+
   return (
     <div
+      ref={rootRef}
       className="obsolete-hero-island"
       style={{
         background: '#f4f1ea',
@@ -47,7 +93,8 @@ export default function ObsoleteHeroIsland() {
         }}
       >
         <Player
-          autoPlay={!reducedMotion}
+          ref={playerRef}
+          autoPlay={false}
           initialFrame={560}
           loop={!reducedMotion}
           initiallyMuted

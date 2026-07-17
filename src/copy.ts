@@ -1,7 +1,9 @@
 export const metaCopy = {
-  title: 'Obsolete — Creative technology for interesting ideas',
+  siteName: 'Obsolete',
+  title: 'Obsolete | Creative technology for interesting ideas',
   description:
     'Obsolete is a creative technology studio designing and building ambitious digital experiences for creative companies.',
+  imageAlt: 'Obsolete, creative technology studio.',
 } as const;
 
 export const accessibilityCopy = {
@@ -21,7 +23,7 @@ export const headerCopy = {
 } as const;
 
 export const workPageCopy = {
-  metaTitle: 'Work — Obsolete',
+  metaTitle: 'Work | Obsolete',
   metaDescription:
     'Selected digital work by Obsolete, a creative technology studio designing and engineering ambitious digital experiences.',
   eyebrow: 'Selected work',
@@ -34,13 +36,16 @@ export const workPageCopy = {
     statement: 'A complex offer, made clear.',
     summary:
       'Strategy, UX/UI, content architecture, and engineering for a multidisciplinary digital studio.',
+    imageAlt: 'The Craft Applied homepage with cream typography on a deep green background.',
     href: '/work/craft-applied',
     action: 'Read case study',
   },
 } as const;
 
 export const contactPageCopy = {
-  metaTitle: 'Contact — Obsolete',
+  metaTitle: 'Contact | Obsolete',
+  metaDescription:
+    'Contact Obsolete to discuss an ambitious digital experience, creative technology project, or complex idea.',
   eyebrow: 'Contact',
   title: 'Bring us an idea.',
   body: 'Our contact details are being prepared for publication.',
@@ -52,7 +57,7 @@ export const contactPageCopy = {
 } as const;
 
 export const featuredWorkCopy = {
-  eyebrow: 'Featured work — 01',
+  eyebrow: 'Featured work / 01',
   status: {
     desktop: 'Design + development / Live',
     mobile: 'Live',
@@ -64,7 +69,7 @@ export const featuredWorkCopy = {
   },
   statement: 'A clearer, faster home for a multidisciplinary digital studio.',
   summary:
-    'We designed and developed a content-rich website that turns a broad service offering into a clear journey—from capabilities and technology to selected work, editorial thinking, and contact.',
+    'We designed and developed a content-rich website that turns a broad service offering into a clear journey, from capabilities and technology to selected work, editorial thinking, and contact.',
   imageAlt:
     'The Craft Applied homepage, with cream typography on a deep green background describing its website and application work.',
   captions: {
@@ -98,11 +103,91 @@ export const featuredWorkCopy = {
   },
 } as const;
 
+const startConversationActionCopy = {
+  label: 'Start a conversation',
+  href: '/contact',
+  suffix: '↗',
+} as const;
+
+export const pricingEstimatorCopy = {
+  ariaLabel: 'Project pricing estimator',
+  eyebrow: 'Project pricing / Indicative',
+  title: 'A useful range, before the brief.',
+  introduction:
+    'Choose the engagement closest to what you are making. Each range covers a tightly bounded direction, design, and engineering process.',
+  optionsLabel: 'Engagement options',
+  neutral: {
+    eyebrow: 'Your estimate',
+    title: 'Choose an engagement',
+    body: 'We will show the likely investment, where it fits, and the boundary that keeps the work focused.',
+  },
+  resultLabel: 'Estimate result',
+  resultEyebrow: 'Indicative estimate',
+  announcement: {
+    estimate: 'Indicative estimate',
+    vat: 'including VAT',
+  },
+  noScriptTitle: 'Indicative ranges',
+  detailLabels: {
+    fit: 'Best fit',
+    boundary: 'Scope boundary',
+    assumptions: 'Every range assumes',
+  },
+  serviceScope:
+    'The range covers creative direction, design, and engineering through one continuous, tightly bounded process.',
+  assumptions: [
+    'Final content and core assets are supplied by the client.',
+    'One feedback lead consolidates decisions.',
+    'Two revision rounds are included.',
+  ],
+  qualifier:
+    'Indicative, includes VAT, and confirmed through a scoped proposal once the outcome and final deliverables are understood.',
+  action: startConversationActionCopy,
+  engagements: [
+    {
+      id: 'campaign-launch',
+      index: '01',
+      label: 'Campaign / launch',
+      range: '£5–10k',
+      fit: 'A focused launch or campaign experience for one important moment.',
+      boundary:
+        'One clear outcome, shaped through a tightly bounded process rather than an open-ended programme of work.',
+    },
+    {
+      id: 'studio-brand-site',
+      index: '02',
+      label: 'Studio / brand site',
+      range: '£10–20k',
+      fit: 'A compact custom marketing, portfolio, or brand website for a creative company.',
+      boundary:
+        'A coherent custom site built around a focused story and content journey, not an unlimited digital estate.',
+    },
+    {
+      id: 'editorial-platform',
+      index: '03',
+      label: 'Editorial platform',
+      range: '£15–30k',
+      fit: 'A content-rich publishing experience for an editorial team with a clear point of view.',
+      boundary:
+        'A focused content model and limited reusable publishing system, designed around the material that matters most.',
+    },
+    {
+      id: 'digital-product',
+      index: '04',
+      label: 'Digital product',
+      range: '£25–50k',
+      fit: 'A focused product concept or one core MVP workflow for a product team ready to learn by making.',
+      boundary:
+        'Discovery and delivery stay centred on the product’s essential job rather than a broad platform or expanding feature list.',
+    },
+  ],
+} as const;
+
 export const craftAppliedCaseStudyCopy = {
-  metaTitle: 'Craft Applied case study — Obsolete',
+  metaTitle: 'Craft Applied case study | Obsolete',
   metaDescription:
     'How Obsolete turned Craft Applied’s broad multidisciplinary offer into a clear, accessible digital system.',
-  eyebrow: 'Case study — 01',
+  eyebrow: 'Case study / 01',
   status: 'Design + development / Live',
   title: 'Craft Applied',
   headline: 'A complex offer, made clear.',
@@ -182,7 +267,7 @@ export const craftAppliedCaseStudyCopy = {
     index: '06',
     eyebrow: 'What shipped',
     title: 'A durable platform, not a finished poster.',
-    body: 'The result is a content-rich website with a clear service model, reusable publishing patterns, and an accessible responsive interface—built to hold new work and thinking without losing the structure that makes it useful.',
+    body: 'The result is a content-rich website with a clear service model, reusable publishing patterns, and an accessible responsive interface built to hold new work and thinking without losing the structure that makes it useful.',
     items: [
       ['Strategy', 'Offer hierarchy and content architecture'],
       ['Experience', 'Responsive UX/UI and visual system'],
@@ -206,7 +291,7 @@ export const capabilitiesCopy = {
   eyebrow: 'What we make',
   title: 'From first thought to finished thing.',
   introduction:
-    'We join creative direction, design, and engineering in one continuous process—so the idea stays intact all the way to launch.',
+    'We join creative direction, design, and engineering in one continuous process, so the idea stays intact all the way to launch.',
   navigationAriaLabel: 'Capability sections',
   capabilities: [
     {
@@ -225,7 +310,7 @@ export const capabilitiesCopy = {
       label: 'Design',
       title: 'Make it feel inevitable.',
       description:
-        'We shape interfaces, systems, and interactions that feel distinctive to the idea—not borrowed from the category.',
+        'We shape interfaces, systems, and interactions that feel distinctive to the idea, not borrowed from the category.',
       detailsAriaLabel: 'Design services',
       details: ['Art direction', 'UX + UI systems', 'Interaction + motion'],
     },
@@ -245,12 +330,8 @@ export const capabilitiesCopy = {
 export const contactCtaCopy = {
   eyebrow: 'Have something in mind?',
   title: 'Bring us the idea you cannot stop thinking about.',
-  body: 'Early sketch, complicated brief, or fully formed plan—we would like to hear what makes it interesting.',
-  action: {
-    label: 'Start a conversation',
-    href: '/contact',
-    suffix: '↗',
-  },
+  body: 'Early sketch, complicated brief, or fully formed plan. We would like to hear what makes it interesting.',
+  action: startConversationActionCopy,
 } as const;
 
 export const obsoleteHeroAnimationCopy = {

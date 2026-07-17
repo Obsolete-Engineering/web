@@ -4,11 +4,30 @@ import Capabilities from "../components/Capabilities.astro";
 import ContactCta from "../components/ContactCta.astro";
 import FeaturedWork from "../components/FeaturedWork.astro";
 import Hero from "../components/Hero.astro";
+import PricingEstimator from "../components/PricingEstimator.astro";
 ---
 
 <BaseLayout headerVariant="overlay">
-  <Hero />
-  <FeaturedWork />
-  <Capabilities />
-  <ContactCta />
+  <div data-home-motion>
+    <Hero />
+    <FeaturedWork />
+    <PricingEstimator />
+    <Capabilities />
+    <ContactCta />
+  </div>
 </BaseLayout>
+
+<script>
+  import { initHomeMotion } from '../scripts/home-motion';
+  import { initPricingEstimator } from '../scripts/pricing-estimator';
+
+  const disposeHomeMotion = initHomeMotion();
+  const disposePricingEstimator = initPricingEstimator();
+
+  window.addEventListener('pagehide', (event) => {
+    if (!event.persisted) {
+      disposeHomeMotion();
+      disposePricingEstimator();
+    }
+  });
+</script>

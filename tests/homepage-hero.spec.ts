@@ -125,6 +125,52 @@ const getOrangeSignal = (page: Page, screenshot: Uint8Array) =>
     return orange;
   }, Buffer.from(screenshot).toString('base64'));
 
+const getOrangeLocality = (
+  page: Page,
+  screenshot: Uint8Array,
+  localPoint: [number, number],
+  height: number,
+) =>
+  page.evaluate(
+    async ({ encoded, height: sampledHeight, localPoint: measuredPoint }) => {
+      const response = await fetch(`data:image/png;base64,${encoded}`);
+      const bitmap = await createImageBitmap(await response.blob());
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Ceremony analysis canvas is unavailable.');
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      let localCount = 0;
+      let localOrange = 0;
+      let remoteCount = 0;
+      let remoteOrange = 0;
+
+      for (let y = 0; y < sampledHeight; y += 2) {
+        for (let x = 0; x < canvas.width; x += 2) {
+          const index = (y * canvas.width + x) * 4;
+          const distance = Math.hypot(x - measuredPoint[0], y - measuredPoint[1]);
+          const orange = Math.max(pixels[index] - pixels[index + 1] - 12, 0);
+          if (distance <= 58) {
+            localCount += 1;
+            localOrange += orange;
+          } else if (distance >= 190) {
+            remoteCount += 1;
+            remoteOrange += orange;
+          }
+        }
+      }
+
+      return {
+        local: localOrange / Math.max(localCount, 1),
+        remote: remoteOrange / Math.max(remoteCount, 1),
+      };
+    },
+    { encoded: Buffer.from(screenshot).toString('base64'), height, localPoint },
+  );
+
 const getLuminanceSpread = (page: Page, screenshot: Uint8Array) =>
   page.evaluate(async (encoded) => {
     const response = await fetch(`data:image/png;base64,${encoded}`);
@@ -454,15 +500,24 @@ test('awakens the first eligible desktop field from the rendered period without 
   await page.goto('/');
 
   const hero = getHero(page);
+  const canvas = hero.locator('[data-fluid-canvas]');
   const heading = page.getByRole('heading', { level: 1, name: title });
   const period = hero.locator('.hero__title-period');
+  const stableElements = [
+    hero,
+    canvas,
+    heading,
+    hero.locator('.hero__lead'),
+    hero.locator('.hero__actions'),
+    page.getByRole('banner', { name: 'Site header' }),
+  ];
   await expectLiveCanvas(page, false);
   await expect(hero).toHaveAttribute('data-ceremony-state', 'running');
   const observedAt = Date.now();
   const [heroBox, periodBox, initialGeometry] = await Promise.all([
     hero.boundingBox(),
     period.boundingBox(),
-    heading.boundingBox(),
+    Promise.all(stableElements.map((element) => element.boundingBox())),
   ]);
   if (!heroBox || !periodBox) throw new Error('The punctuation origin is unavailable.');
   const measuredOrigin: [number, number] = [
@@ -486,6 +541,26 @@ test('awakens the first eligible desktop field from the rendered period without 
   expect(origin[0]).toBeCloseTo(measuredOrigin[0], 3);
   expect(origin[1]).toBeCloseTo(measuredOrigin[1], 3);
 
+  const hiddenInterface = await page.addStyleTag({
+    content: 'header, .hero__content { visibility: hidden !important; }',
+  });
+  const clip = {
+    height: 160,
+    width: heroBox.width,
+    x: heroBox.x,
+    y: Math.min(Math.max(periodBox.y + periodBox.height / 2 - 80, heroBox.y), 480),
+  };
+  await page.waitForTimeout(100);
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'running');
+  const orange = await getOrangeLocality(
+    page,
+    await page.screenshot({ clip }),
+    [periodBox.x + periodBox.width / 2 - clip.x, periodBox.y + periodBox.height / 2 - clip.y],
+    clip.height,
+  );
+  expect(orange.local).toBeGreaterThan(orange.remote + 0.25);
+  await hiddenInterface.evaluate((element) => (element as HTMLElement).remove());
+
   await page.evaluate(() => {
     (window as typeof window & { fluidClearCount: number }).fluidClearCount = 0;
   });
@@ -493,7 +568,9 @@ test('awakens the first eligible desktop field from the rendered period without 
   expect(Date.now() - observedAt).toBeGreaterThan(1_500);
   expect(Date.now() - observedAt).toBeLessThan(2_800);
   await expect(hero).toHaveAttribute('data-ceremony-progress', '1');
-  expect(await heading.boundingBox()).toEqual(initialGeometry);
+  expect(await Promise.all(stableElements.map((element) => element.boundingBox()))).toEqual(
+    initialGeometry,
+  );
   expect(
     await page.evaluate(
       () => (window as typeof window & { fluidClearCount: number }).fluidClearCount,

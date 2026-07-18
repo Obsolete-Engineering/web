@@ -151,11 +151,31 @@ const getLuminanceSpread = (page: Page, screenshot: Uint8Array) =>
     return Math.sqrt(Math.max(sumSquares / count - mean * mean, 0));
   }, Buffer.from(screenshot).toString('base64'));
 
-const expectLiveCanvas = async (page: Page) => {
+const expectLiveCanvas = async (page: Page, resolveCeremony = true) => {
   const hero = getHero(page);
   await expect(hero).toHaveAttribute('data-fluid-state', /live|fallback/u);
   test.skip((await hero.getAttribute('data-fluid-state')) !== 'live', 'WebGL is unavailable');
+  if (resolveCeremony && (await hero.getAttribute('data-ceremony-state')) !== 'settled') {
+    await page.keyboard.press('Escape');
+    await expect(hero).toHaveAttribute('data-ceremony-state', /settled|skipped/u);
+  }
 };
+
+const installClearCounter = (page: Page) =>
+  page.addInitScript(() => {
+    const state = window as typeof window & { fluidClearCount: number };
+    state.fluidClearCount = 0;
+    for (const prototype of [WebGLRenderingContext.prototype, WebGL2RenderingContext.prototype]) {
+      const clear = prototype.clear;
+      Object.defineProperty(prototype, 'clear', {
+        configurable: true,
+        value(this: WebGLRenderingContext, ...arguments_: unknown[]) {
+          state.fluidClearCount += 1;
+          return Reflect.apply(clear, this, arguments_);
+        },
+      });
+    }
+  });
 
 const installDrawCounter = (page: Page) =>
   page.addInitScript(() => {
@@ -318,6 +338,7 @@ for (const viewport of [
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
+    await page.addStyleTag({ content: 'astro-dev-toolbar { display: none !important; }' });
     await page.evaluate(() => document.fonts.ready);
     await expect(getHero(page)).toHaveScreenshot(`hero-warm-paper-${viewport.name}.png`, {
       animations: 'disabled',
@@ -383,6 +404,8 @@ test('uses a static, non-interactive symbol field for reduced motion', async ({ 
   const hero = getHero(page);
   await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
   await expect(hero).toHaveAttribute('data-fluid-state', 'static');
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+  await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'reduced-motion');
   await expect(hero.locator('[data-fluid-pointer-dot]')).toBeHidden();
   await expectCurrentHeroComposition(page);
 
@@ -410,9 +433,78 @@ test('falls back without errors when WebGL is unavailable', async ({ page }) => 
 
   const hero = getHero(page);
   await expect(hero).toHaveAttribute('data-fluid-state', 'fallback');
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+  await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'fallback');
   await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
   await expectCurrentHeroComposition(page);
   expect(errors).toEqual([]);
+});
+
+test('awakens the first eligible desktop field from the rendered period without a reset', async ({
+  page,
+}) => {
+  await installClearCounter(page);
+  await page.setViewportSize({ width: 1024, height: 640 });
+  await page.addInitScript(() => {
+    const initializedKey = 'obsolete:hero-ceremony-test-initialized';
+    if (window.sessionStorage.getItem(initializedKey) === 'true') return;
+    window.sessionStorage.clear();
+    window.sessionStorage.setItem(initializedKey, 'true');
+  });
+  await page.goto('/');
+
+  const hero = getHero(page);
+  const heading = page.getByRole('heading', { level: 1, name: title });
+  const period = hero.locator('.hero__title-period');
+  await expectLiveCanvas(page, false);
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'running');
+  const observedAt = Date.now();
+  const [heroBox, periodBox, initialGeometry] = await Promise.all([
+    hero.boundingBox(),
+    period.boundingBox(),
+    heading.boundingBox(),
+  ]);
+  if (!heroBox || !periodBox) throw new Error('The punctuation origin is unavailable.');
+  const measuredOrigin: [number, number] = [
+    (periodBox.x + periodBox.width / 2 - heroBox.x) / heroBox.width,
+    1 - (periodBox.y + periodBox.height / 2 - heroBox.y) / heroBox.height,
+  ];
+  const interfaceState = await page.evaluate(() =>
+    ['.site-header', '.hero__eyebrow', '#hero-title', '.hero__clarification'].map((selector) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element) return false;
+      const style = getComputedStyle(element);
+      const bounds = element.getBoundingClientRect();
+      return style.visibility !== 'hidden' && Number(style.opacity) > 0 && bounds.width > 0;
+    }),
+  );
+  expect(interfaceState).toEqual([true, true, true, true]);
+  await expect(hero).toHaveAttribute('data-ceremony-origin', /^\d\.\d{4},\d\.\d{4}$/u);
+  const originValue = await hero.getAttribute('data-ceremony-origin');
+  const origin = originValue?.split(',').map(Number) as [number, number] | undefined;
+  if (!origin) throw new Error('The punctuation origin was not recorded.');
+  expect(origin[0]).toBeCloseTo(measuredOrigin[0], 3);
+  expect(origin[1]).toBeCloseTo(measuredOrigin[1], 3);
+
+  await page.evaluate(() => {
+    (window as typeof window & { fluidClearCount: number }).fluidClearCount = 0;
+  });
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'settled', { timeout: 4_000 });
+  expect(Date.now() - observedAt).toBeGreaterThan(1_500);
+  expect(Date.now() - observedAt).toBeLessThan(2_800);
+  await expect(hero).toHaveAttribute('data-ceremony-progress', '1');
+  expect(await heading.boundingBox()).toEqual(initialGeometry);
+  expect(
+    await page.evaluate(
+      () => (window as typeof window & { fluidClearCount: number }).fluidClearCount,
+    ),
+  ).toBe(0);
+
+  await page.reload();
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+  await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'repeat-session');
+  await expect(hero).toHaveAttribute('data-ceremony-progress', '1');
+  await expectCurrentHeroComposition(page);
 });
 
 test('fills the hero edge to edge with a dense, continuously moving symbol field', async ({

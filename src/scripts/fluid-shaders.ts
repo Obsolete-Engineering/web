@@ -114,8 +114,11 @@ export const displayFragment = `
   varying vec2 vUv;
   uniform sampler2D uDye;
   uniform sampler2D uVelocity;
+  uniform vec2 uCeremonyOrigin;
   uniform vec2 uCssResolution;
   uniform vec2 uDyeTexelSize;
+  uniform float uCeremonyImpulse;
+  uniform float uCeremonyProgress;
   uniform float uTime;
 
   float hash21(vec2 point) {
@@ -126,7 +129,9 @@ export const displayFragment = `
 
   float box(vec2 point, vec2 halfSize) {
     float distanceToEdge = max(abs(point.x) - halfSize.x, abs(point.y) - halfSize.y);
-    return 1.0 - smoothstep(-0.45, 0.55, distanceToEdge);
+    float softEdgeStart = mix(-1.25, -0.45, uCeremonyProgress);
+    float softEdgeEnd = mix(1.25, 0.55, uCeremonyProgress);
+    return 1.0 - smoothstep(softEdgeStart, softEdgeEnd, distanceToEdge);
   }
 
   float symbol(vec2 pixel, float cellSize) {
@@ -163,10 +168,20 @@ export const displayFragment = `
   }
 
   void main() {
-    vec2 pixel = vUv * uCssResolution;
+    float fieldScale = mix(1.065, 1.0, uCeremonyProgress);
+    vec2 ceremonyUv = 0.5 + (vUv - 0.5) / fieldScale;
+    vec2 pixel = ceremonyUv * uCssResolution;
     float aspect = uCssResolution.x / max(uCssResolution.y, 1.0);
-    vec2 centered = vUv - 0.5;
+    vec2 centered = ceremonyUv - 0.5;
     centered.x *= aspect;
+
+    vec2 impulseOffset = vUv - uCeremonyOrigin;
+    impulseOffset.x *= aspect;
+    float impulseDistance = length(impulseOffset);
+    float pressureFront = mix(0.04, 1.3, uCeremonyProgress);
+    float pressureResponse = exp(-abs(impulseDistance - pressureFront) * 7.5);
+    pressureResponse += exp(-impulseDistance * 2.6) * 0.22;
+    pressureResponse *= uCeremonyImpulse;
 
     float slowTime = uTime * 0.115;
     vec2 ambientOffset = vec2(
@@ -188,6 +203,8 @@ export const displayFragment = `
     ) * interaction * 1.8;
     vec2 interactiveOffset = velocity * vec2(28.0, -28.0);
     interactiveOffset += dyeGradient * vec2(22.0, -22.0) + trailDrift;
+    vec2 pressureDirection = impulseOffset / max(impulseDistance, 0.001);
+    interactiveOffset += pressureDirection * pressureResponse * 5.5;
     vec2 warpedPixel = pixel + ambientOffset + interactiveOffset;
 
     vec2 field = centered;
@@ -202,13 +219,16 @@ export const displayFragment = `
 
     float cellSize = mix(7.2, 8.2, smoothstep(700.0, 1400.0, uCssResolution.x));
     float mark = symbol(warpedPixel, cellSize);
-    float density = mix(0.42, 0.88, smoothstep(0.16, 0.86, wave));
+    float restingDensity = mix(0.42, 0.88, smoothstep(0.16, 0.86, wave));
+    float awakening = max(uCeremonyProgress, pressureResponse * 0.72);
+    float density = restingDensity * mix(0.46, 1.0, awakening);
     float trailDensity = mix(density, 0.98, interaction * 0.72);
     float keep = step(hash21(floor(warpedPixel / cellSize) + 17.0), trailDensity);
 
     float centerDistance = length(centered * vec2(0.82, 1.0));
     float contentQuiet = mix(0.62, 1.0, smoothstep(0.15, 0.58, centerDistance));
     float strength = mark * keep * (0.1 + wave * 0.07) * contentQuiet;
+    strength *= mix(0.34, 1.0, awakening);
     strength *= 1.0 + interaction * 1.15;
 
     const vec3 paper = vec3(0.957, 0.945, 0.918);
@@ -217,7 +237,9 @@ export const displayFragment = `
     vec3 color = mix(paper, graphite, clamp(strength, 0.0, 0.24));
 
     float trailAlpha = interaction * mix(0.12, 0.76, mark * keep);
-    color = mix(color, orange, trailAlpha);
+    float punctuationOrange = exp(-dot(impulseOffset, impulseOffset) / 0.0025);
+    punctuationOrange *= uCeremonyImpulse * mix(0.26, 0.72, mark * keep);
+    color = mix(color, orange, max(trailAlpha, punctuationOrange));
 
     gl_FragColor = vec4(color, 1.0);
   }

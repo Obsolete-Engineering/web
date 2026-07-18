@@ -9,6 +9,7 @@ import {
   injectionFragment,
   pressureFragment,
 } from './fluid-shaders';
+import { createHeroCeremony, type HeroCeremonyFrame } from './hero-ceremony';
 
 type QualityTier = {
   dprCap: number;
@@ -182,6 +183,7 @@ class FluidEngine {
   private readonly resizeObserver: ResizeObserver;
   private readonly textureFormat: TextureFormat;
 
+  private ceremonySettled = true;
   private disposed = false;
   private elapsedTime = Math.random() * 120;
   private frame: number | undefined;
@@ -203,7 +205,12 @@ class FluidEngine {
   private targets: FluidTargets | undefined;
   private warmupFrames = 0;
 
-  constructor(hero: HTMLElement, canvas: HTMLCanvasElement, onReady: () => void) {
+  constructor(
+    hero: HTMLElement,
+    canvas: HTMLCanvasElement,
+    initialCeremonyFrame: HeroCeremonyFrame,
+    onReady: () => void,
+  ) {
     const pointerDot = hero.querySelector<HTMLElement>('[data-fluid-pointer-dot]');
     if (!pointerDot) throw new Error('The fluid pointer dot is unavailable.');
     this.hero = hero;
@@ -225,6 +232,7 @@ class FluidEngine {
     this.textureFormat = getTextureFormat(this.gl);
     this.geometry = new Triangle(this.gl);
     this.passes = this.createPasses();
+    this.setCeremonyFrame(initialCeremonyFrame);
     this.resizeObserver = new ResizeObserver(this.handleResize);
   }
 
@@ -248,6 +256,16 @@ class FluidEngine {
   injectSplat(splat: FluidSplat) {
     if (this.pendingSplats.length >= 32) this.pendingSplats.shift();
     this.pendingSplats.push(splat);
+  }
+
+  setCeremonyFrame(frame: HeroCeremonyFrame) {
+    this.ceremonySettled = frame.progress >= 1;
+    setUniform(this.passes.display, 'uCeremonyImpulse', frame.impulse);
+    setUniform(this.passes.display, 'uCeremonyProgress', frame.progress);
+  }
+
+  setCeremonyOrigin(point: [number, number]) {
+    setUniform(this.passes.display, 'uCeremonyOrigin', point);
   }
 
   setPointerTarget(point: [number, number], speed: number) {
@@ -295,6 +313,9 @@ class FluidEngine {
       uVelocity: { value: null },
     }),
     display: createPass(this.gl, this.geometry, displayFragment, {
+      uCeremonyImpulse: { value: 0 },
+      uCeremonyOrigin: { value: [0.5, 0.5] },
+      uCeremonyProgress: { value: 1 },
       uCssResolution: { value: [1, 1] },
       uDye: { value: null },
       uDyeTexelSize: { value: [1, 1] },
@@ -570,7 +591,7 @@ class FluidEngine {
     const simulationDelta = Math.min(dissipationDelta, MAX_DELTA_SECONDS);
     this.lastFrameTime = time;
     this.step(simulationDelta, dissipationDelta);
-    this.adaptQuality(frameDuration);
+    if (this.ceremonySettled) this.adaptQuality(frameDuration);
     if (this.warmupFrames < 3) {
       this.warmupFrames += 1;
       if (this.warmupFrames === 3) this.onReady();
@@ -603,6 +624,7 @@ export const mountFluidHero = (root: HTMLElement) => {
   const controller = new AbortController();
   const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY);
   const finePointer = window.matchMedia(FINE_POINTER_QUERY);
+  const ceremony = createHeroCeremony(root, reducedMotion);
   let engine: FluidEngine | undefined;
   let disposed = false;
   let lastPointer: { speed: number; time: number; x: number; y: number } | undefined;
@@ -612,6 +634,7 @@ export const mountFluidHero = (root: HTMLElement) => {
   const activeTouchPointers = new Set<number>();
 
   const showFallback = (state: 'fallback' | 'static') => {
+    ceremony.skip(state);
     root.dataset.fluidState = state;
     delete root.dataset.fluidPointerActive;
     lastPointer = undefined;
@@ -626,8 +649,21 @@ export const mountFluidHero = (root: HTMLElement) => {
 
     let candidate: FluidEngine | undefined;
     try {
-      candidate = new FluidEngine(root, canvas, () => {
-        if (!disposed && !reducedMotion.matches) root.dataset.fluidState = 'live';
+      candidate = new FluidEngine(root, canvas, ceremony.initialFrame, () => {
+        if (disposed || reducedMotion.matches || !candidate) return;
+        ceremony.ready({
+          applyFrame: (frame) => candidate?.setCeremonyFrame(frame),
+          injectImpulse: (point) => {
+            candidate?.setCeremonyOrigin(point);
+            candidate?.injectSplat({
+              point,
+              radius: 0.003,
+              strength: 0.5,
+              velocity: [0.1, -0.025],
+            });
+          },
+        });
+        root.dataset.fluidState = 'live';
       });
       candidate.initialize();
       engine = candidate;
@@ -664,7 +700,13 @@ export const mountFluidHero = (root: HTMLElement) => {
       }
       return;
     }
-    if ((!finePointer.matches && event.pointerType !== 'pen') || reducedMotion.matches) return;
+    if (
+      (!finePointer.matches && event.pointerType !== 'pen') ||
+      reducedMotion.matches ||
+      !ceremony.allowsPointerDye()
+    ) {
+      return;
+    }
     if (isInteractiveTarget(event.target)) {
       engine?.clearPointer();
       lastPointer = undefined;
@@ -690,7 +732,9 @@ export const mountFluidHero = (root: HTMLElement) => {
   };
 
   const handlePointerDown = (event: PointerEvent) => {
-    if (event.pointerType !== 'touch' || reducedMotion.matches) return;
+    if (event.pointerType !== 'touch' || reducedMotion.matches || !ceremony.allowsPointerDye()) {
+      return;
+    }
     engine?.clearPointer();
     lastPointer = undefined;
     activeTouchPointers.add(event.pointerId);
@@ -799,6 +843,7 @@ export const mountFluidHero = (root: HTMLElement) => {
     disposed = true;
     controller.abort();
     intersectionObserver.disconnect();
+    ceremony.dispose();
     engine?.dispose();
     engine = undefined;
     activeTouchPointers.clear();

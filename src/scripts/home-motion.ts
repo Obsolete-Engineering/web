@@ -70,50 +70,6 @@ const setupLenis = () => {
   };
 };
 
-const setupHeroEntrance = (root: HTMLElement, isDesktop: boolean, revealed: Set<string>) => {
-  const eyebrow = select<HTMLElement>(root, '[data-motion="hero-eyebrow"]');
-  const titleLines = selectAll<HTMLElement>(root, '[data-motion="hero-title-line"]');
-  const clarification = select<HTMLElement>(root, '[data-motion="hero-clarification"]');
-  const visual = select<HTMLElement>(root, '[data-motion="hero-visual"]');
-  const targets = [eyebrow, ...titleLines, clarification, visual].filter(
-    (target): target is HTMLElement => Boolean(target),
-  );
-
-  if (revealed.has('hero') || !eyebrow || titleLines.length === 0 || !clarification || !visual) {
-    return;
-  }
-  revealed.add('hero');
-
-  gsap.set(eyebrow, { opacity: 0, y: isDesktop ? 12 : 8 });
-  gsap.set(titleLines, {
-    opacity: 0,
-    clipPath: 'inset(0 0 100% 0)',
-    yPercent: isDesktop ? 34 : 22,
-  });
-  gsap.set(clarification, { y: isDesktop ? 18 : 12 });
-  gsap.set(visual, { opacity: 0, scale: isDesktop ? 0.975 : 0.99, y: isDesktop ? 12 : 8 });
-
-  gsap
-    .timeline({
-      defaults: { ease: 'power3.out' },
-      onComplete: () => gsap.set(targets, { clearProps: 'all' }),
-    })
-    .to(eyebrow, { duration: 0.28, opacity: 1, y: 0 })
-    .to(
-      titleLines,
-      {
-        clipPath: 'inset(0 0 0% 0)',
-        opacity: 1,
-        duration: isDesktop ? 0.62 : 0.48,
-        stagger: isDesktop ? 0.07 : 0.045,
-        yPercent: 0,
-      },
-      0.08,
-    )
-    .to(clarification, { duration: 0.42, y: 0 }, 0.48)
-    .to(visual, { duration: 0.52, opacity: 1, scale: 1, y: 0 }, 0.5);
-};
-
 const setupFeaturedWork = (root: HTMLElement, isDesktop: boolean, revealed: Set<string>) => {
   const section = select<HTMLElement>(root, '[data-motion-section="featured-work"]');
   if (!section) return;
@@ -333,7 +289,6 @@ export const initHomeMotion = () => {
       const isDesktop = conditions.desktop;
       root.dataset.motionReady = isDesktop ? 'desktop' : 'mobile';
       const animationContext = gsap.context(() => {
-        setupHeroEntrance(root, isDesktop, revealed);
         setupFeaturedWork(root, isDesktop, revealed);
         setupCapabilities(root, isDesktop, revealed);
         setupAIProductDelivery(root, isDesktop, revealed);

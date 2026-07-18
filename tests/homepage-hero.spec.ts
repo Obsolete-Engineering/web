@@ -20,6 +20,28 @@ const expectNoHorizontalOverflow = async (page: Page) => {
   expect(widths.scroll).toBeLessThanOrEqual(widths.client);
 };
 
+const expectCurrentHeroComposition = async (page: Page) => {
+  const hero = getHero(page);
+  const heading = page.getByRole('heading', { level: 1, name: title });
+  const lead = hero.locator('.hero__lead');
+  const actions = hero.locator('.hero__actions');
+  const primaryAction = hero.getByRole('link', { name: 'Bring us an idea' });
+  const secondaryAction = hero.getByRole('link', { name: 'See our work' });
+
+  await expect(heading).toHaveCount(1);
+  await expect(heading).toBeVisible();
+  await expect(lead).toHaveText(
+    'Obsolete designs and builds custom websites and digital products for creative companies, with creative direction, design, and engineering held by one team from idea to launch.',
+  );
+  await expect(lead).toBeVisible();
+  await expect(actions).toHaveCount(1);
+  await expect(actions).toBeVisible();
+  await expect(primaryAction).toBeVisible();
+  await expect(primaryAction).toHaveAttribute('href', '/contact#project-inquiry');
+  await expect(secondaryAction).toBeVisible();
+  await expect(secondaryAction).toHaveAttribute('href', '/work');
+};
+
 const compareScreenshots = (page: Page, first: Uint8Array, second: Uint8Array) =>
   page.evaluate(
     async ([firstEncoded, secondEncoded]) => {
@@ -123,23 +145,8 @@ test('preserves the approved proposition, actions, and stable masthead', async (
 
   const hero = getHero(page);
   await expect(hero).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: title })).toHaveCount(1);
+  await expectCurrentHeroComposition(page);
   await expect(hero.getByText('Creative technology studio', { exact: true })).toBeVisible();
-  await expect(
-    hero.getByText(
-      /designs and builds custom websites and digital products for creative companies/iu,
-    ),
-  ).toBeVisible();
-  await expect(
-    hero.getByText(
-      /creative direction, design, and engineering held by one team from idea to launch/iu,
-    ),
-  ).toBeVisible();
-  await expect(hero.getByRole('link', { name: 'Bring us an idea' })).toHaveAttribute(
-    'href',
-    '/contact#project-inquiry',
-  );
-  await expect(hero.getByRole('link', { name: 'See our work' })).toHaveAttribute('href', '/work');
   await expect(hero.getByRole('img')).toHaveCount(0);
 
   const header = page.getByRole('banner', { name: 'Site header' });
@@ -274,6 +281,21 @@ for (const viewport of [
   });
 }
 
+test('keeps interface content out of the decorative poster artwork', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.addStyleTag({
+    content:
+      'header, .hero__content, .hero__canvas, .hero__pointer-dot { visibility: hidden !important; }',
+  });
+
+  await expect(getHero(page).locator('[data-fluid-poster]')).toHaveScreenshot(
+    'hero-warm-paper-artwork.png',
+    { animations: 'disabled', maxDiffPixelRatio: 0.005 },
+  );
+});
+
 test('reflows at 200% text size without hiding content or actions', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1100 });
   await page.goto('/');
@@ -305,7 +327,7 @@ test('keeps the poster and complete hero available without JavaScript', async ({
   const hero = getHero(page);
   await expect(hero).toBeVisible();
   await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
-  await expect(hero.getByRole('link', { name: 'Bring us an idea' })).toBeVisible();
+  await expectCurrentHeroComposition(page);
   await context.close();
 });
 
@@ -317,6 +339,7 @@ test('uses a static, non-interactive symbol field for reduced motion', async ({ 
   await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
   await expect(hero).toHaveAttribute('data-fluid-state', 'static');
   await expect(hero.locator('[data-fluid-pointer-dot]')).toBeHidden();
+  await expectCurrentHeroComposition(page);
 
   const before = await page.screenshot();
   await page.mouse.move(100, 400);
@@ -343,7 +366,7 @@ test('falls back without errors when WebGL is unavailable', async ({ page }) => 
   const hero = getHero(page);
   await expect(hero).toHaveAttribute('data-fluid-state', 'fallback');
   await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+  await expectCurrentHeroComposition(page);
   expect(errors).toEqual([]);
 });
 
@@ -508,6 +531,7 @@ test('pauses GPU draws after the hero leaves the viewport and while the document
 test('keeps decorative layers out of the tab order and shows keyboard focus', async ({ page }) => {
   await page.goto('/');
   const hero = getHero(page);
+  await expect(hero.locator('.hero__backdrop')).toHaveAttribute('aria-hidden', 'true');
   await expect(hero.locator('canvas')).not.toHaveAttribute('tabindex', /.+/u);
   await expect(hero.locator('[data-fluid-poster]')).toHaveAttribute('alt', '');
   await expect(hero.locator('[data-fluid-pointer-dot]')).toHaveAttribute('aria-hidden', 'true');

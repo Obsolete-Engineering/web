@@ -263,6 +263,7 @@ class FluidEngine {
   setCeremonyFrame(frame: HeroCeremonyFrame) {
     this.ceremonySettled = frame.progress >= 1;
     setUniform(this.passes.display, 'uCeremonyImpulse', frame.impulse);
+    setUniform(this.passes.display, 'uCeremonyIntensity', frame.intensity);
     setUniform(this.passes.display, 'uCeremonyProgress', frame.progress);
   }
 
@@ -325,6 +326,7 @@ class FluidEngine {
     }),
     display: createPass(this.gl, this.geometry, displayFragment, {
       uCeremonyImpulse: { value: 0 },
+      uCeremonyIntensity: { value: 1 },
       uCeremonyOrigin: { value: [0.5, 0.5] },
       uCeremonyProgress: { value: 1 },
       uCssResolution: { value: [1, 1] },
@@ -649,6 +651,10 @@ export const mountFluidHero = (root: HTMLElement) => {
   const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY);
   const finePointer = window.matchMedia(FINE_POINTER_QUERY);
   const ceremony = createHeroCeremony(root, reducedMotion);
+  const ceremonyImpulse: Omit<FluidSplat, 'point'> =
+    ceremony.variant === 'mobile'
+      ? { radius: 0.002, strength: 0.28, velocity: [0.055, -0.014] }
+      : { radius: 0.003, strength: 0.5, velocity: [0.1, -0.025] };
   let engine: FluidEngine | undefined;
   let disposed = false;
   let lastPointer: { speed: number; time: number; x: number; y: number } | undefined;
@@ -679,12 +685,7 @@ export const mountFluidHero = (root: HTMLElement) => {
           applyFrame: (frame) => candidate?.setCeremonyFrame(frame),
           injectImpulse: (point) => {
             candidate?.setCeremonyOrigin(point);
-            candidate?.injectSplat({
-              point,
-              radius: 0.003,
-              strength: 0.5,
-              velocity: [0.1, -0.025],
-            });
+            candidate?.injectSplat({ ...ceremonyImpulse, point });
           },
         });
         root.dataset.fluidState = 'live';

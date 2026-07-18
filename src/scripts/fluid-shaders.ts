@@ -119,6 +119,7 @@ export const displayFragment = `
   uniform vec2 uDyeTexelSize;
   uniform vec2 uQuietPointer;
   uniform float uCeremonyImpulse;
+  uniform float uCeremonyIntensity;
   uniform float uCeremonyProgress;
   uniform float uQuietPointerStrength;
   uniform float uTime;
@@ -131,8 +132,8 @@ export const displayFragment = `
 
   float box(vec2 point, vec2 halfSize) {
     float distanceToEdge = max(abs(point.x) - halfSize.x, abs(point.y) - halfSize.y);
-    float softEdgeStart = mix(-1.25, -0.45, uCeremonyProgress);
-    float softEdgeEnd = mix(1.25, 0.55, uCeremonyProgress);
+    float softEdgeStart = mix(-0.45 - 0.8 * uCeremonyIntensity, -0.45, uCeremonyProgress);
+    float softEdgeEnd = mix(0.55 + 0.7 * uCeremonyIntensity, 0.55, uCeremonyProgress);
     return 1.0 - smoothstep(softEdgeStart, softEdgeEnd, distanceToEdge);
   }
 
@@ -170,7 +171,7 @@ export const displayFragment = `
   }
 
   void main() {
-    float fieldScale = mix(1.065, 1.0, uCeremonyProgress);
+    float fieldScale = 1.0 + (1.0 - uCeremonyProgress) * 0.065 * uCeremonyIntensity;
     vec2 ceremonyUv = 0.5 + (vUv - 0.5) / fieldScale;
     vec2 pixel = ceremonyUv * uCssResolution;
     float aspect = uCssResolution.x / max(uCssResolution.y, 1.0);
@@ -231,14 +232,16 @@ export const displayFragment = `
     float mark = symbol(warpedPixel, cellSize);
     float restingDensity = mix(0.42, 0.88, smoothstep(0.16, 0.86, wave));
     float awakening = max(uCeremonyProgress, pressureResponse * 0.72);
-    float density = restingDensity * mix(0.46, 1.0, awakening);
+    float latentDensity = 1.0 - 0.54 * uCeremonyIntensity;
+    float density = restingDensity * mix(latentDensity, 1.0, awakening);
     float trailDensity = mix(density, 0.98, interaction * 0.72);
     float keep = step(hash21(floor(warpedPixel / cellSize) + 17.0), trailDensity);
 
     float centerDistance = length(centered * vec2(0.82, 1.0));
     float contentQuiet = mix(0.62, 1.0, smoothstep(0.15, 0.58, centerDistance));
     float strength = mark * keep * (0.1 + wave * 0.07) * contentQuiet;
-    strength *= mix(0.34, 1.0, awakening);
+    float latentStrength = 1.0 - 0.66 * uCeremonyIntensity;
+    strength *= mix(latentStrength, 1.0, awakening);
     strength *= 1.0 + interaction * 1.15;
 
     const vec3 paper = vec3(0.957, 0.945, 0.918);

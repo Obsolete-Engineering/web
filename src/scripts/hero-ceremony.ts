@@ -1,7 +1,3 @@
-export const CEREMONY_DURATION_MS = 2_100;
-export const CEREMONY_IMPULSE_MS = 280;
-export const CEREMONY_POINTER_DYE_MS = 1_650;
-export const CEREMONY_REVEAL_TRANSITION_MS = 160;
 export const HERO_CEREMONY_SESSION_KEY = 'obsolete:hero-ceremony-complete';
 
 export type HeroCeremonyPart =
@@ -14,7 +10,18 @@ export type HeroCeremonyPart =
   | 'clarification'
   | 'actions';
 
-export const HERO_CEREMONY_REVEALS = [
+export type HeroCeremonyVariant = 'desktop' | 'mobile';
+
+type HeroCeremonyProfile = {
+  durationMs: number;
+  impulseMs: number;
+  intensity: number;
+  pointerDyeMs: number;
+  reveals: readonly { atMs: number; part: HeroCeremonyPart }[];
+  revealTransitionMs: number;
+};
+
+const DESKTOP_REVEALS = [
   { atMs: 420, part: 'identity' },
   { atMs: 560, part: 'masthead' },
   { atMs: 640, part: 'eyebrow' },
@@ -23,7 +30,43 @@ export const HERO_CEREMONY_REVEALS = [
   { atMs: 1_040, part: 'period' },
   { atMs: 1_120, part: 'clarification' },
   { atMs: 1_220, part: 'actions' },
-] as const satisfies readonly { atMs: number; part: HeroCeremonyPart }[];
+] as const satisfies HeroCeremonyProfile['reveals'];
+
+const MOBILE_REVEALS = [
+  { atMs: 260, part: 'identity' },
+  { atMs: 360, part: 'masthead' },
+  { atMs: 400, part: 'eyebrow' },
+  { atMs: 470, part: 'headline-first' },
+  { atMs: 600, part: 'headline-rest' },
+  { atMs: 720, part: 'period' },
+  { atMs: 820, part: 'clarification' },
+  { atMs: 960, part: 'actions' },
+] as const satisfies HeroCeremonyProfile['reveals'];
+
+export const HERO_CEREMONY_PROFILES = {
+  desktop: {
+    durationMs: 2_100,
+    impulseMs: 280,
+    intensity: 1,
+    pointerDyeMs: 1_650,
+    reveals: DESKTOP_REVEALS,
+    revealTransitionMs: 160,
+  },
+  mobile: {
+    durationMs: 1_600,
+    impulseMs: 180,
+    intensity: 0.58,
+    pointerDyeMs: 1_600,
+    reveals: MOBILE_REVEALS,
+    revealTransitionMs: 120,
+  },
+} as const satisfies Record<HeroCeremonyVariant, HeroCeremonyProfile>;
+
+export const CEREMONY_DURATION_MS = HERO_CEREMONY_PROFILES.desktop.durationMs;
+export const CEREMONY_IMPULSE_MS = HERO_CEREMONY_PROFILES.desktop.impulseMs;
+export const CEREMONY_POINTER_DYE_MS = HERO_CEREMONY_PROFILES.desktop.pointerDyeMs;
+export const CEREMONY_REVEAL_TRANSITION_MS = HERO_CEREMONY_PROFILES.desktop.revealTransitionMs;
+export const HERO_CEREMONY_REVEALS = HERO_CEREMONY_PROFILES.desktop.reveals;
 
 const CEREMONY_READINESS_TIMEOUT_MS = 800;
 const DESKTOP_QUERY = '(min-width: 861px) and (hover: hover) and (pointer: fine)';
@@ -31,13 +74,13 @@ const INTERACTIVE_SELECTOR = 'a, button, input, select, textarea, [role="button"
 
 export type HeroCeremonyFrame = {
   impulse: number;
+  intensity: number;
   progress: number;
 };
 
 type HeroCeremonyEligibilityInput = {
   hasCompleted: boolean;
   hasHash: boolean;
-  isDesktop: boolean;
   reducedMotion: boolean;
   storageAvailable: boolean;
 };
@@ -46,7 +89,7 @@ type HeroCeremonyEligibility =
   | { eligible: true; reason: 'eligible' }
   | {
       eligible: false;
-      reason: 'hash' | 'reduced-motion' | 'repeat-session' | 'storage' | 'viewport';
+      reason: 'hash' | 'reduced-motion' | 'repeat-session' | 'storage';
     };
 
 type HeroCeremonyRuntime = {
@@ -61,6 +104,7 @@ export type HeroCeremonyController = {
   dispose: () => void;
   initialFrame: HeroCeremonyFrame;
   ready: (runtime: HeroCeremonyRuntime) => void;
+  variant: HeroCeremonyVariant;
   skip: (reason: string) => void;
 };
 
@@ -72,33 +116,46 @@ export const decideHeroCeremonyEligibility = (
 ): HeroCeremonyEligibility => {
   if (input.hasCompleted) return { eligible: false, reason: 'repeat-session' };
   if (input.hasHash) return { eligible: false, reason: 'hash' };
-  if (!input.isDesktop) return { eligible: false, reason: 'viewport' };
   if (input.reducedMotion) return { eligible: false, reason: 'reduced-motion' };
   if (!input.storageAvailable) return { eligible: false, reason: 'storage' };
   return { eligible: true, reason: 'eligible' };
 };
 
-export const getRevealedHeroCeremonyParts = (elapsedMs: number): HeroCeremonyPart[] => {
+export const getRevealedHeroCeremonyParts = (
+  elapsedMs: number,
+  variant: HeroCeremonyVariant = 'desktop',
+): HeroCeremonyPart[] => {
   const revealed: HeroCeremonyPart[] = [];
-  for (const { atMs, part } of HERO_CEREMONY_REVEALS) {
+  for (const { atMs, part } of HERO_CEREMONY_PROFILES[variant].reveals) {
     if (elapsedMs >= atMs) revealed.push(part);
   }
   return revealed;
 };
 
-export const isHeroPointerDyeAvailable = (elapsedMs: number) =>
-  elapsedMs >= CEREMONY_POINTER_DYE_MS;
+export const isHeroPointerDyeAvailable = (
+  elapsedMs: number,
+  variant: HeroCeremonyVariant = 'desktop',
+) => elapsedMs >= HERO_CEREMONY_PROFILES[variant].pointerDyeMs;
 
-export const getHeroCeremonyFrame = (elapsedMs: number): HeroCeremonyFrame => {
-  if (elapsedMs <= CEREMONY_IMPULSE_MS) return { impulse: 0, progress: 0 };
-  if (elapsedMs >= CEREMONY_DURATION_MS) return { impulse: 0, progress: 1 };
+export const getHeroCeremonyFrame = (
+  elapsedMs: number,
+  variant: HeroCeremonyVariant = 'desktop',
+): HeroCeremonyFrame => {
+  const profile = HERO_CEREMONY_PROFILES[variant];
+  if (elapsedMs <= profile.impulseMs) {
+    return { impulse: 0, intensity: profile.intensity, progress: 0 };
+  }
+  if (elapsedMs >= profile.durationMs) {
+    return { impulse: 0, intensity: profile.intensity, progress: 1 };
+  }
 
   const linearProgress = clamp(
-    (elapsedMs - CEREMONY_IMPULSE_MS) / (CEREMONY_DURATION_MS - CEREMONY_IMPULSE_MS),
+    (elapsedMs - profile.impulseMs) / (profile.durationMs - profile.impulseMs),
   );
   const progress = easeOutQuint(linearProgress);
-  const impulse = Math.sin(Math.PI * linearProgress) * (1 - linearProgress * 0.35);
-  return { impulse, progress };
+  const impulse =
+    Math.sin(Math.PI * linearProgress) * (1 - linearProgress * 0.35) * profile.intensity;
+  return { impulse, intensity: profile.intensity, progress };
 };
 
 const readSession = () => {
@@ -122,9 +179,32 @@ const measureImpulsePoint = (root: HTMLElement): [number, number] | undefined =>
   const periodBounds = period.getBoundingClientRect();
   if (heroBounds.width <= 0 || heroBounds.height <= 0 || periodBounds.width <= 0) return;
 
+  const revealTranslation = { x: 0, y: 0 };
+  let element: HTMLElement | null = period;
+  while (element && element !== root) {
+    const style = getComputedStyle(element);
+    if (
+      Object.hasOwn(element.dataset, 'ceremonyPart') &&
+      style.display !== 'inline' &&
+      style.transform !== 'none'
+    ) {
+      const matrix = new DOMMatrixReadOnly(style.transform);
+      revealTranslation.x += matrix.m41;
+      revealTranslation.y += matrix.m42;
+    }
+    element = element.parentElement;
+  }
+
   return [
-    clamp((periodBounds.left + periodBounds.width / 2 - heroBounds.left) / heroBounds.width),
-    1 - clamp((periodBounds.top + periodBounds.height / 2 - heroBounds.top) / heroBounds.height),
+    clamp(
+      (periodBounds.left + periodBounds.width / 2 - revealTranslation.x - heroBounds.left) /
+        heroBounds.width,
+    ),
+    1 -
+      clamp(
+        (periodBounds.top + periodBounds.height / 2 - revealTranslation.y - heroBounds.top) /
+          heroBounds.height,
+      ),
   ];
 };
 
@@ -133,18 +213,19 @@ export const createHeroCeremony = (
   reducedMotion: MediaQueryList,
 ): HeroCeremonyController => {
   const session = readSession();
+  const variant: HeroCeremonyVariant = window.matchMedia(DESKTOP_QUERY).matches
+    ? 'desktop'
+    : 'mobile';
+  const profile = HERO_CEREMONY_PROFILES[variant];
   const eligibility = decideHeroCeremonyEligibility({
     hasCompleted: session.completed,
     hasHash: window.location.hash.length > 1,
-    isDesktop: window.matchMedia(DESKTOP_QUERY).matches,
     reducedMotion: reducedMotion.matches,
     storageAvailable: session.available,
   });
   const controller = new AbortController();
-  const settledFrame: HeroCeremonyFrame = { impulse: 0, progress: 1 };
-  let currentFrame: HeroCeremonyFrame = eligibility.eligible
-    ? { impulse: 0, progress: 0 }
-    : settledFrame;
+  const settledFrame = getHeroCeremonyFrame(profile.durationMs, variant);
+  let currentFrame = eligibility.eligible ? getHeroCeremonyFrame(0, variant) : settledFrame;
   let frame: number | undefined;
   let readinessTimer: number | undefined;
   let runtime: HeroCeremonyRuntime | undefined;
@@ -153,14 +234,14 @@ export const createHeroCeremony = (
   let pointerDyeAvailable = !eligibility.eligible;
   let state: HeroCeremonyState = eligibility.eligible ? 'eligible' : 'skipped';
   const ceremonyParts = new Map(
-    HERO_CEREMONY_REVEALS.map(({ part }) => [
+    profile.reveals.map(({ part }) => [
       part,
       Array.from(document.querySelectorAll<HTMLElement>(`[data-ceremony-part="${part}"]`)),
     ]),
   );
 
   const revealInterface = (elapsedMs: number) => {
-    for (const part of getRevealedHeroCeremonyParts(elapsedMs)) {
+    for (const part of getRevealedHeroCeremonyParts(elapsedMs, variant)) {
       for (const element of ceremonyParts.get(part) ?? []) {
         element.dataset.ceremonyRevealed = 'true';
       }
@@ -205,13 +286,13 @@ export const createHeroCeremony = (
   const tick = (time: number) => {
     if (state !== 'running' || !runtime) return;
     const elapsed = time - startedAt;
-    currentFrame = getHeroCeremonyFrame(elapsed);
+    currentFrame = getHeroCeremonyFrame(elapsed, variant);
     revealInterface(elapsed);
-    if (!pointerDyeAvailable && isHeroPointerDyeAvailable(elapsed)) {
+    if (!pointerDyeAvailable && isHeroPointerDyeAvailable(elapsed, variant)) {
       setPointerDyeAvailable(true);
     }
 
-    if (!impulseInjected && elapsed >= CEREMONY_IMPULSE_MS) {
+    if (!impulseInjected && elapsed >= profile.impulseMs) {
       const point = measureImpulsePoint(root);
       if (!point) {
         skip('missing-origin');
@@ -223,7 +304,7 @@ export const createHeroCeremony = (
     }
 
     runtime.applyFrame(currentFrame);
-    if (elapsed >= CEREMONY_DURATION_MS) {
+    if (elapsed >= profile.durationMs) {
       resolve('settled');
       return;
     }
@@ -272,6 +353,7 @@ export const createHeroCeremony = (
     if (document.visibilityState === 'hidden') skip('visibility');
   };
 
+  root.dataset.ceremonyVariant = variant;
   setState(state);
   setPointerDyeAvailable(pointerDyeAvailable);
   if (eligibility.eligible) {
@@ -329,5 +411,6 @@ export const createHeroCeremony = (
     initialFrame: currentFrame,
     ready,
     skip,
+    variant,
   };
 };

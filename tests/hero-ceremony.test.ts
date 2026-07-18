@@ -7,6 +7,7 @@ import {
   CEREMONY_IMPULSE_MS,
   CEREMONY_POINTER_DYE_MS,
   CEREMONY_REVEAL_TRANSITION_MS,
+  HERO_CEREMONY_PROFILES,
   HERO_CEREMONY_REVEALS,
   decideHeroCeremonyEligibility,
   getHeroCeremonyFrame,
@@ -15,12 +16,11 @@ import {
 } from '../src/scripts/hero-ceremony.ts';
 
 describe('hero ceremony eligibility', () => {
-  test('allows only the first live desktop view with session storage', () => {
+  test('allows the first live view with session storage at every supported width', () => {
     assert.deepEqual(
       decideHeroCeremonyEligibility({
         hasCompleted: false,
         hasHash: false,
-        isDesktop: true,
         reducedMotion: false,
         storageAvailable: true,
       }),
@@ -31,7 +31,6 @@ describe('hero ceremony eligibility', () => {
   const ineligibleCases = [
     ['repeat-session', { hasCompleted: true }],
     ['hash', { hasHash: true }],
-    ['viewport', { isDesktop: false }],
     ['reduced-motion', { reducedMotion: true }],
     ['storage', { storageAvailable: false }],
   ] as const;
@@ -42,7 +41,6 @@ describe('hero ceremony eligibility', () => {
         decideHeroCeremonyEligibility({
           hasCompleted: false,
           hasHash: false,
-          isDesktop: true,
           reducedMotion: false,
           storageAvailable: true,
           ...override,
@@ -93,6 +91,36 @@ describe('hero ceremony interface choreography', () => {
   });
 });
 
+describe('mobile hero ceremony choreography', () => {
+  const mobile = HERO_CEREMONY_PROFILES.mobile;
+
+  test('compresses the same reveal order into the mobile handoff', () => {
+    assert.deepEqual(
+      mobile.reveals.map(({ part }) => part),
+      HERO_CEREMONY_REVEALS.map(({ part }) => part),
+    );
+    assert.equal(mobile.durationMs, 1_600);
+    assert.ok(mobile.reveals.at(-1));
+    assert.ok(
+      (mobile.reveals.at(-1)?.atMs ?? Number.POSITIVE_INFINITY) + mobile.revealTransitionMs <=
+        1_200,
+    );
+    assert.equal(mobile.pointerDyeMs, mobile.durationMs);
+  });
+
+  test('uses a lower-intensity field awakening than desktop', () => {
+    assert.ok(mobile.intensity < HERO_CEREMONY_PROFILES.desktop.intensity);
+    assert.deepEqual(getHeroCeremonyFrame(0, 'mobile'), {
+      impulse: 0,
+      intensity: mobile.intensity,
+      progress: 0,
+    });
+    const mobileImpulse = getHeroCeremonyFrame(mobile.impulseMs + 200, 'mobile');
+    const desktopImpulse = getHeroCeremonyFrame(CEREMONY_IMPULSE_MS + 200);
+    assert.ok(mobileImpulse.impulse < desktopImpulse.impulse);
+  });
+});
+
 describe('hero ceremony field behavior', () => {
   test('keeps authored orange local to the punctuation impulse', () => {
     assert.match(displayFragment, /punctuationOrange = exp\(-dot\(impulseOffset, impulseOffset\)/u);
@@ -103,7 +131,11 @@ describe('hero ceremony field behavior', () => {
   test('uses a broader graphite pressure response to awaken the field', () => {
     assert.match(displayFragment, /pressureFront = mix\(0\.04, 1\.3, uCeremonyProgress\)/u);
     assert.match(displayFragment, /awakening = max\(uCeremonyProgress, pressureResponse/u);
-    assert.match(displayFragment, /density = restingDensity \* mix\(0\.46, 1\.0, awakening\)/u);
+    assert.match(displayFragment, /latentDensity = 1\.0 - 0\.54 \* uCeremonyIntensity/u);
+    assert.match(
+      displayFragment,
+      /density = restingDensity \* mix\(latentDensity, 1\.0, awakening\)/u,
+    );
   });
 
   test('gates normal orange pointer dye while keeping a graphite-only response', () => {
@@ -118,9 +150,10 @@ describe('hero ceremony field behavior', () => {
 
 describe('hero ceremony settle', () => {
   test('holds a latent field before the punctuation impulse', () => {
-    assert.deepEqual(getHeroCeremonyFrame(0), { impulse: 0, progress: 0 });
+    assert.deepEqual(getHeroCeremonyFrame(0), { impulse: 0, intensity: 1, progress: 0 });
     assert.deepEqual(getHeroCeremonyFrame(CEREMONY_IMPULSE_MS - 1), {
       impulse: 0,
+      intensity: 1,
       progress: 0,
     });
   });
@@ -138,7 +171,7 @@ describe('hero ceremony settle', () => {
     assert.ok(
       samples.every((frame, index) => index === 0 || frame.progress >= samples[index - 1].progress),
     );
-    assert.deepEqual(settled, { impulse: 0, progress: 1 });
+    assert.deepEqual(settled, { impulse: 0, intensity: 1, progress: 1 });
     assert.deepEqual(getHeroCeremonyFrame(CEREMONY_DURATION_MS + 500), settled);
   });
 });

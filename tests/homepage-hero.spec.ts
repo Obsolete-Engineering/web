@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
+
+test.describe.configure({ mode: 'default' });
 
 const title = 'The internet could be more interesting.';
 const viewports = [
@@ -197,14 +199,35 @@ const getLuminanceSpread = (page: Page, screenshot: Uint8Array) =>
     return Math.sqrt(Math.max(sumSquares / count - mean * mean, 0));
   }, Buffer.from(screenshot).toString('base64'));
 
+const settleHeroCeremony = async (page: Page) => {
+  const hero = getHero(page);
+  await expect(hero).toHaveAttribute(
+    'data-ceremony-state',
+    /eligible|ready|running|settled|skipped/u,
+  );
+  const state = await hero.getAttribute('data-ceremony-state');
+  if (state === 'eligible' || state === 'ready' || state === 'running') {
+    await page.keyboard.press('Escape');
+  }
+  await expect(hero).toHaveAttribute('data-ceremony-state', /settled|skipped/u);
+};
+
 const expectLiveCanvas = async (page: Page, resolveCeremony = true) => {
   const hero = getHero(page);
   await expect(hero).toHaveAttribute('data-fluid-state', /live|fallback/u);
   test.skip((await hero.getAttribute('data-fluid-state')) !== 'live', 'WebGL is unavailable');
-  if (resolveCeremony && (await hero.getAttribute('data-ceremony-state')) !== 'settled') {
-    await page.keyboard.press('Escape');
-    await expect(hero).toHaveAttribute('data-ceremony-state', /settled|skipped/u);
-  }
+  if (resolveCeremony) await settleHeroCeremony(page);
+};
+
+const createMobileCeremonyPage = async (browser: Browser) => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  await page.addInitScript(() => window.sessionStorage.clear());
+  return { context, page };
 };
 
 const installCeremonyObserver = (page: Page) =>
@@ -390,6 +413,7 @@ for (const viewport of viewports) {
 
     const hero = getHero(page);
     const heading = page.getByRole('heading', { level: 1, name: title });
+    await settleHeroCeremony(page);
     await expect(hero).toBeVisible();
     await expect(heading).toBeVisible();
     await expect(hero.getByRole('link', { name: 'Bring us an idea' })).toBeVisible();
@@ -457,12 +481,29 @@ test('reflows at 200% text size without hiding content or actions', async ({ pag
   await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
 
   const hero = getHero(page);
+  await settleHeroCeremony(page);
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
   await expect(
     hero.getByText(/custom websites and digital products for creative companies/iu),
   ).toBeVisible();
   await expect(hero.getByRole('link', { name: 'Bring us an idea' })).toBeVisible();
   await expect(hero.getByRole('link', { name: 'See our work' })).toBeVisible();
+  const [heroBox, titleBoxes] = await Promise.all([
+    hero.boundingBox(),
+    Promise.all(
+      ['[data-title-line="first"]', '[data-title-part="middle"]', '[data-title-part="last"]'].map(
+        (selector) => hero.locator(selector).boundingBox(),
+      ),
+    ),
+  ]);
+  if (!heroBox) throw new Error('The text-zoom hero geometry is unavailable.');
+  for (const box of titleBoxes) {
+    if (!box) throw new Error('A text-zoom title line is unavailable.');
+    expect(box.x).toBeGreaterThanOrEqual(heroBox.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(heroBox.x + heroBox.width);
+    expect(box.y).toBeGreaterThanOrEqual(heroBox.y);
+    expect(box.y + box.height).toBeLessThanOrEqual(heroBox.y + heroBox.height);
+  }
   await expectNoHorizontalOverflow(page);
 });
 
@@ -735,17 +776,12 @@ test('awakens the first eligible desktop field from the rendered period without 
   ];
   await expectLiveCanvas(page, false);
   await expect(hero).toHaveAttribute('data-ceremony-state', 'running');
-  const observedAt = Date.now();
   const [heroBox, periodBox, initialGeometry] = await Promise.all([
     hero.boundingBox(),
     period.boundingBox(),
     Promise.all(stableElements.map((element) => element.boundingBox())),
   ]);
   if (!heroBox || !periodBox) throw new Error('The punctuation origin is unavailable.');
-  const measuredOrigin: [number, number] = [
-    (periodBox.x + periodBox.width / 2 - heroBox.x) / heroBox.width,
-    1 - (periodBox.y + periodBox.height / 2 - heroBox.y) / heroBox.height,
-  ];
   const interfaceState = await page.evaluate(() =>
     ['.site-header', '.hero__eyebrow', '#hero-title', '.hero__clarification'].map((selector) => {
       const element = document.querySelector<HTMLElement>(selector);
@@ -764,8 +800,10 @@ test('awakens the first eligible desktop field from the rendered period without 
   const originValue = await hero.getAttribute('data-ceremony-origin');
   const origin = originValue?.split(',').map(Number) as [number, number] | undefined;
   if (!origin) throw new Error('The punctuation origin was not recorded.');
-  expect(origin[0]).toBeCloseTo(measuredOrigin[0], 3);
-  expect(origin[1]).toBeCloseTo(measuredOrigin[1], 3);
+  const originPixel: [number, number] = [
+    heroBox.x + origin[0] * heroBox.width,
+    heroBox.y + (1 - origin[1]) * heroBox.height,
+  ];
 
   const hiddenInterface = await page.addStyleTag({
     content: 'header, .hero__content { visibility: hidden !important; }',
@@ -774,14 +812,12 @@ test('awakens the first eligible desktop field from the rendered period without 
     height: 160,
     width: heroBox.width,
     x: heroBox.x,
-    y: Math.min(Math.max(periodBox.y + periodBox.height / 2 - 80, heroBox.y), 480),
+    y: Math.min(Math.max(originPixel[1] - 80, heroBox.y), 480),
   };
-  await page.waitForTimeout(100);
-  await expect(hero).toHaveAttribute('data-ceremony-state', 'running');
   const orange = await getOrangeLocality(
     page,
     await page.screenshot({ clip }),
-    [periodBox.x + periodBox.width / 2 - clip.x, periodBox.y + periodBox.height / 2 - clip.y],
+    [originPixel[0] - clip.x, originPixel[1] - clip.y],
     clip.height,
   );
   expect(orange.local).toBeGreaterThan(orange.remote + 0.25);
@@ -791,8 +827,20 @@ test('awakens the first eligible desktop field from the rendered period without 
     (window as typeof window & { fluidClearCount: number }).fluidClearCount = 0;
   });
   await expect(hero).toHaveAttribute('data-ceremony-state', 'settled', { timeout: 4_000 });
-  expect(Date.now() - observedAt).toBeGreaterThan(1_500);
-  expect(Date.now() - observedAt).toBeLessThan(2_800);
+  const [settledHeroBox, settledPeriodBox] = await Promise.all([
+    hero.boundingBox(),
+    period.boundingBox(),
+  ]);
+  if (!settledHeroBox || !settledPeriodBox) {
+    throw new Error('The settled punctuation origin is unavailable.');
+  }
+  const settledOrigin: [number, number] = [
+    (settledPeriodBox.x + settledPeriodBox.width / 2 - settledHeroBox.x) / settledHeroBox.width,
+    1 -
+      (settledPeriodBox.y + settledPeriodBox.height / 2 - settledHeroBox.y) / settledHeroBox.height,
+  ];
+  expect(origin[0]).toBeCloseTo(settledOrigin[0], 3);
+  expect(origin[1]).toBeCloseTo(settledOrigin[1], 3);
   await expect(hero).toHaveAttribute('data-ceremony-progress', '1');
   expect(await Promise.all(stableElements.map((element) => element.boundingBox()))).toEqual(
     initialGeometry,
@@ -892,17 +940,114 @@ test('restores a connected fluid mouse trail without moving the content', async 
   await expect(primaryAction).toHaveCSS('cursor', 'pointer');
 });
 
-test('preserves touch scrolling and action taps', async ({ browser }) => {
-  const context = await browser.newContext({
-    hasTouch: true,
-    isMobile: true,
-    viewport: { width: 390, height: 844 },
-  });
-  const page = await context.newPage();
+test('runs the mobile ceremony from the responsive period and settles without layout shift', async ({
+  browser,
+}) => {
+  const { context, page } = await createMobileCeremonyPage(browser);
+  await installCeremonyObserver(page);
   await page.goto('/');
-  await expect(getHero(page).locator('[data-fluid-pointer-dot]')).toBeHidden();
 
-  const session = await context.newCDPSession(page);
+  const hero = getHero(page);
+  const period = hero.locator('.hero__title-period');
+  const stableElements = [
+    page.getByRole('banner', { name: 'Site header' }),
+    hero.locator('.hero__eyebrow'),
+    page.getByRole('heading', { level: 1, name: title }),
+    hero.locator('.hero__clarification'),
+    hero.locator('.hero__actions'),
+  ];
+  await expectLiveCanvas(page, false);
+  await expect(hero).toHaveAttribute('data-ceremony-variant', 'mobile');
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'running');
+
+  await expect(hero).toHaveAttribute('data-ceremony-origin', /^\d\.\d{4},\d\.\d{4}$/u);
+  const origin = (await hero.getAttribute('data-ceremony-origin'))?.split(',').map(Number) as
+    | [number, number]
+    | undefined;
+  if (!origin) throw new Error('The mobile punctuation origin was not recorded.');
+
+  await expect(hero.locator('.hero__actions')).toHaveAttribute('data-ceremony-revealed', 'true');
+  await page.waitForTimeout(140);
+  const revealedGeometry = await Promise.all(
+    stableElements.map((element) => element.boundingBox()),
+  );
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'settled', { timeout: 2_500 });
+  expect(await Promise.all(stableElements.map((element) => element.boundingBox()))).toEqual(
+    revealedGeometry,
+  );
+  const [settledHeroBox, settledPeriodBox] = await Promise.all([
+    hero.boundingBox(),
+    period.boundingBox(),
+  ]);
+  if (!settledHeroBox || !settledPeriodBox) {
+    throw new Error('The settled mobile punctuation origin is unavailable.');
+  }
+  expect(origin[0]).toBeCloseTo(
+    (settledPeriodBox.x + settledPeriodBox.width / 2 - settledHeroBox.x) / settledHeroBox.width,
+    3,
+  );
+  expect(origin[1]).toBeCloseTo(
+    1 -
+      (settledPeriodBox.y + settledPeriodBox.height / 2 - settledHeroBox.y) / settledHeroBox.height,
+    3,
+  );
+
+  const events = await page.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          ceremonyEvents: { name: string; part?: string; time: number }[];
+        }
+      ).ceremonyEvents,
+  );
+  const runningAt = events.find(({ name }) => name === 'state:running')?.time;
+  if (runningAt === undefined) throw new Error('The mobile ceremony start was not observed.');
+  const uniqueReveals = events
+    .filter((event) => event.name === 'reveal' && event.part && event.time >= runningAt)
+    .filter(
+      (event, index, revealEvents) =>
+        revealEvents.findIndex(({ part }) => part === event.part) === index,
+    );
+  expect(uniqueReveals.map(({ part }) => part)).toEqual([
+    'identity',
+    'masthead',
+    'eyebrow',
+    'headline-first',
+    'headline-rest',
+    'period',
+    'clarification',
+    'actions',
+  ]);
+  const actionsAt = uniqueReveals.find(({ part }) => part === 'actions')?.time;
+  const pointerAt = events.find(
+    ({ name, time }) => name === 'pointer:available' && time >= runningAt,
+  )?.time;
+  const settledAt = events.find(
+    ({ name, time }) => name === 'state:settled' && time >= runningAt,
+  )?.time;
+  expect((actionsAt ?? 0) - runningAt).toBeGreaterThanOrEqual(800);
+  expect((actionsAt ?? 0) - runningAt).toBeLessThanOrEqual(1_250);
+  expect((pointerAt ?? 0) - runningAt).toBeGreaterThanOrEqual(1_450);
+  expect((pointerAt ?? 0) - runningAt).toBeLessThanOrEqual(2_100);
+  expect((settledAt ?? 0) - runningAt).toBeGreaterThanOrEqual(1_450);
+  expect((settledAt ?? 0) - runningAt).toBeLessThanOrEqual(2_100);
+  await expectCurrentHeroComposition(page);
+  await expectNoHorizontalOverflow(page);
+  await context.close();
+});
+
+test('preserves touch scrolling and first-attempt action taps during the mobile ceremony', async ({
+  browser,
+}) => {
+  const scrollView = await createMobileCeremonyPage(browser);
+  await scrollView.page.goto('/');
+  const hero = getHero(scrollView.page);
+  await expectLiveCanvas(scrollView.page, false);
+  await expect(hero).toHaveAttribute('data-ceremony-variant', 'mobile');
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'running');
+  await expect(hero.locator('[data-fluid-pointer-dot]')).toBeHidden();
+
+  const session = await scrollView.context.newCDPSession(scrollView.page);
   await session.send('Input.dispatchTouchEvent', {
     type: 'touchStart',
     touchPoints: [{ x: 200, y: 730 }],
@@ -912,14 +1057,23 @@ test('preserves touch scrolling and action taps', async ({ browser }) => {
     touchPoints: [{ x: 200, y: 180 }],
   });
   await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+  await expect.poll(() => scrollView.page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+  await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'scroll');
+  await expect(hero).not.toHaveAttribute('data-fluid-pointer-active', 'true');
+  await expect(hero).not.toHaveAttribute('data-fluid-pointer-response', /.+/u);
+  await scrollView.context.close();
 
-  await page.evaluate(() => window.scrollTo(0, 0));
+  const actionView = await createMobileCeremonyPage(browser);
+  await actionView.page.goto('/');
+  const actionHero = getHero(actionView.page);
+  await expectLiveCanvas(actionView.page, false);
+  await expect(actionHero).toHaveAttribute('data-ceremony-state', 'running');
   await Promise.all([
-    page.waitForURL('**/contact#project-inquiry'),
-    getHero(page).getByRole('link', { name: 'Bring us an idea' }).tap(),
+    actionView.page.waitForURL('**/contact#project-inquiry'),
+    actionHero.getByRole('link', { name: 'Bring us an idea' }).tap(),
   ]);
-  await context.close();
+  await actionView.context.close();
 });
 
 test('pauses GPU draws after the hero leaves the viewport and while the document is hidden', async ({

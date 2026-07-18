@@ -151,10 +151,14 @@ import { heroCopy } from '../copy';
     transition: opacity 360ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  @media (min-width: 861px) and (hover: hover) and (pointer: fine) {
+  @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
     .hero[data-ceremony-state='pending'] .hero__poster,
     .hero[data-ceremony-state='eligible'] .hero__poster {
       opacity: 0.22;
+    }
+
+    .hero[data-ceremony-variant='mobile'][data-ceremony-state='eligible'] .hero__poster {
+      opacity: 0.48;
     }
   }
 
@@ -252,6 +256,10 @@ import { heroCopy } from '../copy';
   .hero__title-line {
     display: block;
     white-space: nowrap;
+  }
+
+  .hero__title-rest {
+    white-space: normal;
   }
 
   .hero__title-middle,

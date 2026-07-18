@@ -160,9 +160,7 @@ const { variant = 'paper' } = Astro.props;
     color: var(--color-primary);
   }
 
-  @media
-    (scripting: enabled) and (min-width: 861px) and (hover: hover) and (pointer: fine) and
-    (prefers-reduced-motion: no-preference) {
+  @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
     :global(
       body:has(
           .hero:is(
@@ -198,6 +196,19 @@ const { variant = 'paper' } = Astro.props;
       clip-path: inset(0 0 100% 0);
       opacity: 0;
       transform: translateY(8px);
+    }
+
+    :global(
+      body:has(.hero[data-ceremony-variant='mobile']) [data-ceremony-part]
+    ) {
+      transition-duration: 120ms, 90ms, 120ms;
+    }
+
+    :global(
+      body:has(.hero[data-ceremony-variant='mobile'])
+        [data-ceremony-part]:not([data-ceremony-revealed='true'])
+    ) {
+      transform: translateY(4px);
     }
   }
 

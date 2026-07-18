@@ -84,6 +84,11 @@ test('explains why direction, design, and engineering stay connected through lau
       /creative direction, design, and engineering stay connected from the first decision through launch/iu,
     ),
   ).toBeVisible();
+  await expect(
+    section.getByText(
+      /engineer accessible digital experiences.+interfaces, interaction.+web platforms/iu,
+    ),
+  ).toBeVisible();
 
   const capabilityGroups = [
     ['Direction', 'Creative direction', 'Experience strategy', 'Rapid prototyping'],

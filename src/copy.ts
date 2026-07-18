@@ -481,7 +481,7 @@ export const capabilitiesCopy = {
       label: 'Engineering',
       title: 'Build the difficult part properly.',
       description:
-        'We engineer fast, accessible digital experiences with enough care beneath the surface to keep them useful after launch.',
+        'We engineer accessible digital experiences, carrying the idea through interfaces, interaction, and the web platforms beneath them.',
       detailsAriaLabel: 'Engineering services',
       details: ['Creative development', 'Web platforms', 'Performance + accessibility'],
     },

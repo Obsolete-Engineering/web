@@ -10,6 +10,40 @@ const viewports = [
   { width: 1440, height: 900 },
 ] as const;
 
+// No evidence has been approved for these homepage claim forms. A future claim must add
+// that evidence and intentionally update this visitor-visible baseline at the same time.
+const unsupportedHomepageClaims = [
+  [
+    'comparative speed',
+    /\b(?:fast(?:er|est)?|quick(?:er|est)?|instant(?:ly)?|outperform(?:s|ed)?|half the (?:load )?time)\b|\b(?:loads?|renders?|responds?)\s+(?:in|within|under)\s+\d+(?:\.\d+)?\s*(?:ms|milliseconds?|seconds?)\b/iu,
+  ],
+  [
+    'quantified outcome',
+    /\b(?:increase(?:d|s)?|improve(?:d|s)?|improvement|reduce(?:d|s)?|save(?:d|s|ings?)?|boost(?:ed|s)?|grow(?:s|th|n)?|grew|cut|uplift)\b[^\n.!?]{0,60}(?:\d+(?:\.\d+)?\s*(?:%|[x×])|[£$€]\s*\d[\d,.]*\s*(?:k|m|b|million|billion)?)/iu,
+  ],
+  [
+    'quantified outcome',
+    /(?:\d+(?:\.\d+)?\s*(?:%|[x×])|[£$€]\s*\d[\d,.]*\s*(?:k|m|b|million|billion)?)[^\n.!?]{0,60}\b(?:increase(?:d|s)?|improve(?:d|s)?|improvement|reduce(?:d|s)?|save(?:d|s|ings?)?|boost(?:ed|s)?|grow(?:s|th|n)?|grew|cut|uplift)\b/iu,
+  ],
+  [
+    'testimonial',
+    /\b(?:testimonials?|what (?:our )?clients say|clients? (?:say|said)|client stories)\b|[“"][^”"\n]{20,}[”"]\s*(?:[—-]|,\s*(?:CEO|Founder|Director)\b)/iu,
+  ],
+  ['award', /\b(?:award(?:ed|s|-winning)?|winner|Cannes Lions?|Webbys?|Awwwards?|D&AD|BAFTA)\b/iu],
+  [
+    'customer count',
+    /(?:\b(?:join|trusted by|serving|used by|chosen by)\s+)?(?:\b(?:over|more than)\s+)?(?:\d[\d,]*(?:\+)?|hundreds?|thousands?|millions?)\s+(?:clients?|customers?|companies|teams|businesses)\b/iu,
+  ],
+  [
+    'business result',
+    /\b(?:increase(?:d|s)?|improve(?:d|s)?|reduce(?:d|s)?|boost(?:ed|s)?|grow(?:s|n)?|grew|rise|rises|rose|cut|double(?:d|s)?|triple(?:d|s)?|growth|uplift)\b[^\n.!?]{0,60}\b(?:conversions?|revenue|sales|profit|roi|traffic|retention|leads?|costs?)\b/iu,
+  ],
+  [
+    'business result',
+    /\b(?:conversions?|revenue|sales|profit|roi|traffic|retention|leads?|costs?)\b[^\n.!?]{0,60}\b(?:increase(?:d|s)?|improve(?:d|s)?|reduce(?:d|s)?|boost(?:ed|s)?|grow(?:s|n)?|grew|rise|rises|rose|cut|double(?:d|s)?|triple(?:d|s)?|growth|uplift)\b/iu,
+  ],
+] as const;
+
 const getHero = (page: Page) => page.getByRole('region', { name: title });
 
 const expectNoHorizontalOverflow = async (page: Page) => {
@@ -177,6 +211,18 @@ test('describes the concrete offer in page metadata', async ({ page }) => {
   );
 });
 
+test('keeps visitor-visible homepage language free of unsupported claims', async ({ page }) => {
+  await page.goto('/');
+
+  const visitorVisibleCopy = await page.locator('body').innerText();
+  for (const [claimType, pattern] of unsupportedHomepageClaims) {
+    expect(
+      visitorVisibleCopy,
+      `visitor-visible homepage copy contains an unsupported ${claimType} claim`,
+    ).not.toMatch(pattern);
+  }
+});
+
 test('puts documented proof after the proposition and preserves the homepage order', async ({
   page,
 }) => {
@@ -219,7 +265,6 @@ test('puts documented proof after the proposition and preserves the homepage ord
   ).toBeVisible();
   await expect(featuredWork.getByText('Design + development', { exact: true })).toBeVisible();
   await expect(featuredWork.getByText(/Astro, SolidJS, TailwindCSS, Plausible/iu)).toBeVisible();
-  await expect(featuredWork.getByText(/\bfaster\b/iu)).toHaveCount(0);
   await expect(featuredWork.getByRole('link', { name: 'View case study' })).toHaveAttribute(
     'href',
     '/work/craft-applied',

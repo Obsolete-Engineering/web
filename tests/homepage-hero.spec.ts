@@ -170,7 +170,9 @@ test('describes the concrete offer in page metadata', async ({ page }) => {
   );
 });
 
-test('puts documented Craft Applied proof directly after the proposition', async ({ page }) => {
+test('puts documented proof after the proposition and preserves the homepage order', async ({
+  page,
+}) => {
   await page.goto('/');
 
   const featuredWork = page.getByRole('region', { name: 'Craft Applied' });

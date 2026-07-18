@@ -501,9 +501,8 @@ export const contactCtaCopy = {
     body: 'Commodity production, an unlimited brief, or AI added without a clear user outcome.',
   },
   action: {
+    ...startConversationActionCopy,
     label: 'Start a project inquiry',
-    href: '/contact#project-inquiry',
-    suffix: '↗',
   },
 } as const;
 

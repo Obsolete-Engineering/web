@@ -4,26 +4,30 @@ const engagements = [
   {
     label: 'Campaign / launch',
     range: '£5–10k',
-    fit: 'A focused launch or campaign experience',
-    boundary: 'One clear outcome, shaped through a tightly bounded process',
+    fit: 'A focused launch or campaign experience for one important moment.',
+    boundary:
+      'One clear outcome, shaped through a tightly bounded process rather than an open-ended programme of work.',
   },
   {
     label: 'Studio / brand site',
     range: '£10–20k',
-    fit: 'A compact custom marketing, portfolio, or brand website',
-    boundary: 'A coherent custom site built around a focused story and content journey',
+    fit: 'A compact custom marketing, portfolio, or brand website for a creative company.',
+    boundary:
+      'A coherent custom site built around a focused story and content journey, not an unlimited digital estate.',
   },
   {
     label: 'Editorial platform',
     range: '£15–30k',
-    fit: 'A content-rich publishing experience',
-    boundary: 'A focused content model and limited reusable publishing system',
+    fit: 'A content-rich publishing experience for an editorial team with a clear point of view.',
+    boundary:
+      'A focused content model and limited reusable publishing system, designed around the material that matters most.',
   },
   {
     label: 'Digital product',
     range: '£25–50k',
-    fit: 'A focused product concept or one core MVP workflow',
-    boundary: 'Discovery and delivery stay centred on the product’s essential job',
+    fit: 'A focused product concept or one core MVP workflow for a product team ready to learn by making.',
+    boundary:
+      'Discovery and delivery stay centred on the product’s essential job rather than a broad platform or expanding feature list.',
   },
 ] as const;
 
@@ -94,8 +98,11 @@ for (const engagement of engagements) {
     await expect(option).toHaveAttribute('aria-pressed', 'true');
     await expect(result.getByRole('heading', { name: engagement.label })).toBeVisible();
     await expect(result.getByText(engagement.range, { exact: true })).toBeVisible();
-    await expect(result.getByText(engagement.fit, { exact: false })).toBeVisible();
-    await expect(result.getByText(engagement.boundary, { exact: false })).toBeVisible();
+    await expect(result.getByText(engagement.fit, { exact: true })).toBeVisible();
+    await expect(result.getByText(engagement.boundary, { exact: true })).toBeVisible();
+    await expect(estimator.getByRole('status')).toHaveText(
+      `${engagement.label}. Indicative estimate ${engagement.range}, including VAT.`,
+    );
     await expect(
       result.getByText(/range covers creative direction, design, and engineering/iu),
     ).toBeVisible();

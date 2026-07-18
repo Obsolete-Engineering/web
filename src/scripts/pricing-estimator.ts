@@ -1,3 +1,5 @@
+import { mountSurfaceGrain } from './surface-grain';
+
 let disposeCurrentRuntime: (() => void) | undefined;
 
 export const initPricingEstimator = () => {
@@ -8,15 +10,26 @@ export const initPricingEstimator = () => {
 
   const options = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-pricing-option]'));
   const result = root.querySelector<HTMLElement>('[data-pricing-result]');
+  const resultContent = root.querySelector<HTMLElement>('[data-pricing-result-content]');
+  const grainRoot = root.querySelector<HTMLElement>('[data-pricing-grain]');
   const announcement = root.querySelector<HTMLElement>('[role="status"]');
   const estimateLabel = root.dataset.announcementEstimate;
   const vatLabel = root.dataset.announcementVat;
 
-  if (options.length === 0 || !result || !announcement || !estimateLabel || !vatLabel) {
+  if (
+    options.length === 0 ||
+    !result ||
+    !resultContent ||
+    !grainRoot ||
+    !announcement ||
+    !estimateLabel ||
+    !vatLabel
+  ) {
     return () => {};
   }
 
   const abortController = new AbortController();
+  const disposeGrain = mountSurfaceGrain(grainRoot);
 
   const selectEngagement = (selectedOption: HTMLButtonElement) => {
     const templateId = selectedOption.dataset.pricingOption;
@@ -28,10 +41,12 @@ export const initPricingEstimator = () => {
       option.setAttribute('aria-pressed', String(option === selectedOption));
     }
 
-    result.replaceChildren(template.content.cloneNode(true));
+    resultContent.replaceChildren(template.content.cloneNode(true));
 
-    const label = result.querySelector('h3')?.textContent?.trim();
-    const range = result.querySelector<HTMLElement>('[data-pricing-range]')?.textContent?.trim();
+    const label = resultContent.querySelector('h3')?.textContent?.trim();
+    const range = resultContent
+      .querySelector<HTMLElement>('[data-pricing-range]')
+      ?.textContent?.trim();
     if (label && range) {
       announcement.textContent = `${label}. ${estimateLabel} ${range}, ${vatLabel}.`;
     }
@@ -45,6 +60,7 @@ export const initPricingEstimator = () => {
 
   const dispose = () => {
     abortController.abort();
+    disposeGrain();
     if (disposeCurrentRuntime === dispose) disposeCurrentRuntime = undefined;
   };
 

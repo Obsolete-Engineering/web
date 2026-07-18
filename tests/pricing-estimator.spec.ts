@@ -1,5 +1,18 @@
 import { expect, test } from '@playwright/test';
 
+import {
+  analyzeGrainFrames,
+  assertWarmMonochromeGrain,
+  expectCanvasToCoverSurface,
+  installGrainContextRequestTrace,
+  installGrainDrawTrace,
+  installGrainFailure,
+  readGrainContextRequests,
+  readGrainDrawTrace,
+  resetGrainDrawTrace,
+  type GrainFailure,
+} from './grain-surface-helpers';
+
 const engagements = [
   {
     label: 'Campaign / launch',
@@ -85,6 +98,140 @@ test('sits between featured work and the closing contact invitation in a neutral
   );
 });
 
+test('keeps static grain on the result from first paint and without JavaScript', async ({
+  request,
+  browser,
+}) => {
+  const response = await request.get('/');
+  const html = await response.text();
+  expect(html).toContain('data-pricing-grain');
+  expect(html).toContain('data-grain-state="static"');
+
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto('/');
+  const estimator = getEstimator(page);
+  const fallbackSurfaces = estimator.locator('.pricing-estimator__fallback-result');
+  await expect(fallbackSurfaces).toHaveCount(engagements.length);
+  await expect(fallbackSurfaces.first()).toHaveAttribute('data-grain-state', 'static');
+  await expect(fallbackSurfaces.first().locator('.pricing-estimator__grain')).toHaveCSS(
+    'background-image',
+    /capabilities-grain\.png/u,
+  );
+  await expect(
+    fallbackSurfaces.first().getByRole('link', { name: 'Start a conversation' }),
+  ).toBeVisible();
+  await context.close();
+});
+
+test('uses static result grain without requesting WebGL for reduced motion', async ({ page }) => {
+  await installGrainContextRequestTrace(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  const result = getEstimator(page).getByRole('region', { name: 'Estimate result' });
+  await result.scrollIntoViewIfNeeded();
+
+  await expect(result).toHaveAttribute('data-grain-state', 'static');
+  await expect(result.locator('.pricing-estimator__grain')).toHaveAttribute('aria-hidden', 'true');
+  await expect(result.locator('.pricing-estimator__grain')).toHaveCSS('pointer-events', 'none');
+  await expect(result.locator('[data-grain-canvas]')).not.toHaveAttribute('tabindex', /.+/u);
+  expect(await readGrainContextRequests(page)).toBe(0);
+});
+
+for (const failure of [
+  'unsupported WebGL',
+  'shader initialization',
+] as const satisfies readonly GrainFailure[]) {
+  test(`keeps pricing content available after ${failure}`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await installGrainFailure(page, failure);
+    await page.goto('/');
+    const estimator = getEstimator(page);
+    const result = estimator.getByRole('region', { name: 'Estimate result' });
+    await result.scrollIntoViewIfNeeded();
+
+    await expect(result).toHaveAttribute('data-grain-state', 'fallback');
+    await expect(result.locator('.pricing-estimator__grain')).toHaveCSS(
+      'background-image',
+      /capabilities-grain\.png/u,
+    );
+    const option = estimator.getByRole('button', { name: 'Campaign / launch' });
+    await option.click();
+    await expect(option).toHaveAttribute('aria-pressed', 'true');
+    await expect(result.getByText('£5–10k', { exact: true })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+}
+
+test('arbitrates overlapping grain surfaces through one active renderer', async ({ page }) => {
+  await installGrainDrawTrace(page);
+  await page.setViewportSize({ width: 1200, height: 800 });
+  await page.goto('/');
+  const capabilities = page.getByRole('region', { name: 'From first thought to finished thing.' });
+  const result = getEstimator(page).getByRole('region', { name: 'Estimate result' });
+  test.skip(
+    [
+      await capabilities.getAttribute('data-grain-state'),
+      await result.getAttribute('data-grain-state'),
+    ].includes('fallback'),
+    'WebGL is unavailable',
+  );
+
+  const overlap = await page.addStyleTag({
+    content: `
+      [data-capabilities-grain] {
+        bottom: 0 !important;
+        left: 0 !important;
+        position: fixed !important;
+        right: 50% !important;
+        top: 0 !important;
+      }
+      [data-pricing-grain] {
+        bottom: 0 !important;
+        left: 50% !important;
+        position: fixed !important;
+        right: 0 !important;
+        top: 0 !important;
+      }
+    `,
+  });
+  await expect
+    .poll(async () => {
+      const states = await Promise.all([
+        capabilities.evaluate((element) => (element as HTMLElement).dataset.grainState),
+        result.evaluate((element) => (element as HTMLElement).dataset.grainState),
+      ]);
+      return states.filter((state) => state === 'live').length;
+    })
+    .toBe(1);
+
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(300);
+  const draws = await readGrainDrawTrace(page);
+  const activeRenderers = [draws.capabilities, draws.pricing].filter((count) => count > 1);
+  expect(activeRenderers).toHaveLength(1);
+  expect(Math.min(draws.capabilities, draws.pricing)).toBeLessThanOrEqual(1);
+  await overlap.evaluate((element) => (element as HTMLElement).remove());
+
+  const justOffscreen = await page.addStyleTag({
+    content: `
+      [data-pricing-grain] {
+        height: 400px !important;
+        left: 0 !important;
+        position: fixed !important;
+        top: calc(100vh + 1px) !important;
+        width: 600px !important;
+      }
+    `,
+  });
+  await expect(result).toHaveAttribute('data-grain-state', /paused|static/u);
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(220);
+  expect((await readGrainDrawTrace(page)).pricing).toBe(0);
+  await justOffscreen.evaluate((element) => (element as HTMLElement).remove());
+});
+
 for (const engagement of engagements) {
   test(`shows the right full-service estimate and boundaries for ${engagement.label}`, async ({
     page,
@@ -160,7 +307,145 @@ test('supports keyboard selection, announces updates, and keeps focus on the sel
   expect(focusStyle.outlineWidth).toBe('2px');
 
   await page.keyboard.press('Tab');
-  await expect(estimator.getByRole('link', { name: 'Start a conversation' })).toBeFocused();
+  const action = estimator.getByRole('link', { name: 'Start a conversation' });
+  await expect(action).toBeFocused();
+
+  const result = estimator.getByRole('region', { name: 'Estimate result' });
+  await expect(result.locator('.pricing-estimator__grain')).toHaveAttribute('aria-hidden', 'true');
+  await expect(result.locator('.pricing-estimator__grain')).toHaveCSS('pointer-events', 'none');
+  await expect(result.locator('[data-grain-canvas]')).not.toHaveAttribute('tabindex', /.+/u);
+  expect(
+    await result.evaluate((element) => ({
+      content: getComputedStyle(element.querySelector('[data-pricing-result-content]')!).zIndex,
+      grain: getComputedStyle(element.querySelector('.pricing-estimator__grain')!).zIndex,
+    })),
+  ).toEqual({ content: '1', grain: '0' });
+});
+
+test('pauses, resumes, resizes, and disposes the pricing grain without offscreen GPU work', async ({
+  page,
+}) => {
+  await installGrainDrawTrace(page);
+  await page.setViewportSize({ width: 1200, height: 800 });
+  await page.goto('/');
+  const estimator = getEstimator(page);
+  const result = estimator.getByRole('region', { name: 'Estimate result' });
+  await expect(result).toHaveAttribute('data-grain-state', /static|fallback/u);
+  test.skip((await result.getAttribute('data-grain-state')) === 'fallback', 'WebGL is unavailable');
+
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(220);
+  expect((await readGrainDrawTrace(page)).pricing).toBe(0);
+
+  await result.scrollIntoViewIfNeeded();
+  await expect(result).toHaveAttribute('data-grain-state', 'live');
+  await expect(result).toHaveAttribute('data-grain-quality', 'desktop');
+  const canvas = result.locator('[data-grain-canvas]');
+  await expectCanvasToCoverSurface(result);
+  expect(
+    await canvas.evaluate(
+      (element) =>
+        Math.round(
+          ((element as HTMLCanvasElement).width / element.getBoundingClientRect().width) * 100,
+        ) / 100,
+    ),
+  ).toBeLessThanOrEqual(1.51);
+
+  await estimator.getByRole('button', { name: 'Editorial platform' }).click();
+  await expect(result.getByText('£15–30k', { exact: true })).toBeVisible();
+  await expect(result).toHaveAttribute('data-grain-state', 'live');
+  const hiddenContent = await page.addStyleTag({
+    content: '.pricing-estimator__result-content { visibility: hidden !important; }',
+  });
+  const staticOverride = await page.addStyleTag({
+    content: '.pricing-estimator__grain canvas { opacity: 0 !important; }',
+  });
+  const staticFrame = await canvas.screenshot();
+  await staticOverride.evaluate((element) => (element as HTMLElement).remove());
+  const first = await canvas.screenshot();
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(1_100);
+  const activeDraws = await readGrainDrawTrace(page);
+  expect(activeDraws.pricing).toBeGreaterThanOrEqual(16);
+  expect(activeDraws.pricing).toBeLessThanOrEqual(22);
+  expect(activeDraws.capabilities).toBeLessThanOrEqual(1);
+  expect(activeDraws.hero).toBeLessThanOrEqual(1);
+  const second = await canvas.screenshot();
+  const desktopAnalysis = await analyzeGrainFrames(page, first, second);
+  const staticAnalysis = await analyzeGrainFrames(page, staticFrame, staticFrame);
+  assertWarmMonochromeGrain(desktopAnalysis);
+  expect(Math.abs(desktopAnalysis.luminance - staticAnalysis.luminance)).toBeLessThan(4);
+  expect(Math.abs(desktopAnalysis.spread - staticAnalysis.spread)).toBeLessThan(4);
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(result).toHaveAttribute('data-grain-state', 'paused');
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(220);
+  expect((await readGrainDrawTrace(page)).pricing).toBe(0);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'visible',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(result).toHaveAttribute('data-grain-state', 'live');
+
+  const capabilities = page.getByRole('region', { name: 'From first thought to finished thing.' });
+  await capabilities.scrollIntoViewIfNeeded();
+  await expect(result).toHaveAttribute('data-grain-state', 'paused');
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(220);
+  expect((await readGrainDrawTrace(page)).pricing).toBe(0);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(result).toHaveAttribute('data-grain-state', 'static');
+  await expect(canvas).toHaveCSS('opacity', '0');
+  await result.scrollIntoViewIfNeeded();
+  await expect(result).toHaveAttribute('data-grain-state', 'live');
+  await expect(result).toHaveAttribute('data-grain-quality', 'mobile');
+  await expectCanvasToCoverSurface(result);
+  expect(
+    await canvas.evaluate(
+      (element) =>
+        Math.round(
+          ((element as HTMLCanvasElement).width / element.getBoundingClientRect().width) * 100,
+        ) / 100,
+    ),
+  ).toBeLessThanOrEqual(0.91);
+  const mobileFirst = await canvas.screenshot();
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(1_100);
+  const mobileDraws = (await readGrainDrawTrace(page)).pricing;
+  expect(mobileDraws).toBeGreaterThanOrEqual(13);
+  expect(mobileDraws).toBeLessThanOrEqual(16);
+  const mobileSecond = await canvas.screenshot();
+  const mobileAnalysis = await analyzeGrainFrames(page, mobileFirst, mobileSecond);
+  assertWarmMonochromeGrain(mobileAnalysis);
+  expect(Math.abs(mobileAnalysis.luminance - desktopAnalysis.luminance)).toBeLessThan(3);
+  expect(Math.abs(mobileAnalysis.spread - desktopAnalysis.spread)).toBeLessThan(3);
+  await hiddenContent.evaluate((element) => (element as HTMLElement).remove());
+
+  await canvas.dispatchEvent('webglcontextlost');
+  await expect(result).toHaveAttribute('data-grain-state', 'fallback');
+  await expect(result.getByText('£15–30k', { exact: true })).toBeVisible();
+
+  await page.reload();
+  const reloadedResult = getEstimator(page).getByRole('region', { name: 'Estimate result' });
+  await reloadedResult.scrollIntoViewIfNeeded();
+  test.skip(
+    (await reloadedResult.getAttribute('data-grain-state')) === 'fallback',
+    'WebGL is unavailable',
+  );
+  await expect(reloadedResult).toHaveAttribute('data-grain-state', 'live');
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide')));
+  await expect(reloadedResult).toHaveAttribute('data-grain-state', 'static');
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(220);
+  expect((await readGrainDrawTrace(page)).pricing).toBe(0);
 });
 
 test('stacks controls before the result with comfortable targets and no mobile overflow', async ({

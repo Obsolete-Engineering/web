@@ -1,9 +1,10 @@
 <script lang="ts">
   import { actions } from 'astro:actions';
   import { z } from 'astro/zod';
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { Button, Checkbox, Label, Select } from 'bits-ui';
   import { contactPageCopy } from '../copy';
+  import { mountSurfaceGrain } from '../scripts/surface-grain';
 
   const copy = contactPageCopy.form;
   const capabilityValues = ['direction', 'design', 'engineering', 'not-sure'] as const;
@@ -59,6 +60,9 @@
   let showValidationSummary = $state(false);
   let submissionState = $state<'idle' | 'submitting' | 'success' | 'error'>('idle');
   let actionNotice: HTMLElement | undefined = $state();
+  let grainRoot: HTMLElement | undefined = $state();
+
+  onMount(() => (grainRoot ? mountSurfaceGrain(grainRoot) : undefined));
 
   function clearSubmissionState() {
     submissionState = 'idle';
@@ -151,8 +155,19 @@
   }
 </script>
 
-<section class="contact-form" id="project-inquiry" aria-labelledby="project-inquiry-title">
-  <div class="contact-form__inner">
+<section
+  class="contact-form"
+  id="project-inquiry"
+  aria-labelledby="project-inquiry-title"
+  data-grain-state="static"
+  data-surface-grain
+  bind:this={grainRoot}
+>
+  <div class="contact-form__grain" aria-hidden="true" data-grain-layer>
+    <canvas data-grain-canvas></canvas>
+  </div>
+
+  <div class="contact-form__inner" data-grain-content>
     <header class="contact-form__header">
       <p class="contact-form__eyebrow">
         <span aria-hidden="true"></span>

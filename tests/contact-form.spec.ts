@@ -1,5 +1,18 @@
 import { expect, test } from '@playwright/test';
 
+import {
+  analyzeGrainFrames,
+  assertWarmMonochromeGrain,
+  expectCanvasToCoverSurface,
+  installGrainContextRequestTrace,
+  installGrainDrawTrace,
+  installGrainFailure,
+  readGrainContextRequests,
+  readGrainDrawTrace,
+  resetGrainDrawTrace,
+  type GrainFailure,
+} from './grain-surface-helpers';
+
 const getFormSection = (page: import('@playwright/test').Page) =>
   page.getByRole('region', { name: 'Give us the shape of it.' });
 
@@ -134,6 +147,226 @@ test('places the qualified project inquiry below the contact hero', async ({ pag
   await expect(
     formSection.locator('input[type="tel"], input[type="url"], input[type="file"]'),
   ).toHaveCount(0);
+});
+
+test('keeps static grain from first paint and without JavaScript', async ({ request, browser }) => {
+  const [response, textureResponse] = await Promise.all([
+    request.get('/contact'),
+    request.get('/capabilities-grain.png'),
+  ]);
+  expect(await response.text()).toContain('data-grain-state="static"');
+  expect(textureResponse.ok()).toBe(true);
+
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto('/contact');
+  const formSection = getFormSection(page);
+
+  await expect(formSection).toHaveAttribute('data-grain-state', 'static');
+  await expect(formSection.locator('.contact-form__grain')).toHaveCSS(
+    'background-image',
+    /capabilities-grain\.png/u,
+  );
+  await expect(formSection.getByLabel('Your name')).toBeVisible();
+  await expect(formSection.getByRole('button', { name: 'Send the idea' })).toBeVisible();
+  await context.close();
+});
+
+test('uses static grain without requesting WebGL for reduced motion', async ({ page }) => {
+  await installGrainContextRequestTrace(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/contact');
+  const formSection = getFormSection(page);
+  await formSection.scrollIntoViewIfNeeded();
+
+  await expect(formSection).toHaveAttribute('data-grain-state', 'static');
+  await expect(formSection.locator('.contact-form__grain')).toHaveAttribute('aria-hidden', 'true');
+  await expect(formSection.locator('.contact-form__grain')).toHaveCSS('pointer-events', 'none');
+  await expect(formSection.locator('[data-grain-canvas]')).not.toHaveAttribute('tabindex', /.+/u);
+  expect(await readGrainContextRequests(page)).toBe(0);
+});
+
+for (const failure of [
+  'unsupported WebGL',
+  'shader initialization',
+] as const satisfies readonly GrainFailure[]) {
+  test(`keeps the contact form available after ${failure}`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await installGrainFailure(page, failure);
+    await page.goto('/contact');
+    const formSection = getFormSection(page);
+    await formSection.scrollIntoViewIfNeeded();
+
+    await expect(formSection).toHaveAttribute('data-grain-state', 'fallback');
+    await expect(formSection.locator('.contact-form__grain')).toHaveCSS(
+      'background-image',
+      /capabilities-grain\.png/u,
+    );
+    await expect(formSection.getByLabel('Your name')).toBeEditable();
+    await expect(formSection.getByRole('button', { name: 'Send the idea' })).toBeEnabled();
+    expect(errors).toEqual([]);
+  });
+}
+
+test('keeps the contact grain behind keyboard-accessible form controls', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/contact');
+  const formSection = getFormSection(page);
+  const orderedControls = [
+    formSection.getByLabel('Your name'),
+    formSection.getByLabel('Email'),
+    formSection.getByLabel('Company / organization'),
+    formSection.getByRole('checkbox', { name: 'Direction' }),
+    formSection.getByRole('checkbox', { name: 'Design' }),
+    formSection.getByRole('checkbox', { name: 'Engineering' }),
+    formSection.getByRole('checkbox', { name: 'Not sure yet' }),
+    formSection.getByLabel('Tell us about the idea'),
+    formSection.getByRole('button', { name: 'Indicative investment', exact: true }),
+    formSection.getByRole('button', { name: 'When would you like to begin?', exact: true }),
+    formSection.getByRole('button', { name: 'Send the idea' }),
+  ];
+
+  await orderedControls[0].focus();
+  await orderedControls.reduce(async (previous, control, index) => {
+    await previous;
+    await expect(control).toBeFocused();
+    if (index < orderedControls.length - 1) await page.keyboard.press('Tab');
+  }, Promise.resolve());
+
+  const name = orderedControls[0];
+  await name.scrollIntoViewIfNeeded();
+  const box = await name.boundingBox();
+  if (!box) throw new Error('The contact name field is unavailable.');
+  expect(
+    await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.id, {
+      x: box.x + box.width / 2,
+      y: box.y + box.height / 2,
+    }),
+  ).toBe('contact-name');
+  expect(
+    await formSection.evaluate((element) => ({
+      content: getComputedStyle(element.querySelector('.contact-form__inner')!).zIndex,
+      grain: getComputedStyle(element.querySelector('.contact-form__grain')!).zIndex,
+    })),
+  ).toEqual({ content: '1', grain: '0' });
+});
+
+test('pauses, resumes, resizes, and disposes the contact grain coherently', async ({ page }) => {
+  await installGrainDrawTrace(page);
+  await page.setViewportSize({ width: 1200, height: 700 });
+  await page.goto('/contact');
+  const formSection = getFormSection(page);
+  await expect(formSection).toHaveAttribute('data-grain-state', /static|fallback/u);
+  test.skip(
+    (await formSection.getAttribute('data-grain-state')) === 'fallback',
+    'WebGL is unavailable',
+  );
+
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(220);
+  expect((await readGrainDrawTrace(page)).contact).toBe(0);
+
+  await formSection.scrollIntoViewIfNeeded();
+  await expect(formSection).toHaveAttribute('data-grain-state', 'live');
+  await expect(formSection).toHaveAttribute('data-grain-quality', 'desktop');
+  const canvas = formSection.locator('[data-grain-canvas]');
+  await expectCanvasToCoverSurface(formSection);
+  await expect(canvas).toHaveCSS('pointer-events', 'none');
+  expect(
+    await canvas.evaluate(
+      (element) =>
+        Math.round(
+          ((element as HTMLCanvasElement).width / element.getBoundingClientRect().width) * 100,
+        ) / 100,
+    ),
+  ).toBeLessThanOrEqual(1.51);
+
+  const hiddenContent = await page.addStyleTag({
+    content: '.contact-form__inner { visibility: hidden !important; }',
+  });
+  const staticOverride = await page.addStyleTag({
+    content: '.contact-form__grain canvas { opacity: 0 !important; }',
+  });
+  const staticFrame = await canvas.screenshot();
+  await staticOverride.evaluate((element) => (element as HTMLElement).remove());
+  const first = await canvas.screenshot();
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(1_100);
+  const desktopDraws = (await readGrainDrawTrace(page)).contact;
+  expect(desktopDraws).toBeGreaterThanOrEqual(16);
+  expect(desktopDraws).toBeLessThanOrEqual(22);
+  const second = await canvas.screenshot();
+  const desktopAnalysis = await analyzeGrainFrames(page, first, second);
+  const staticAnalysis = await analyzeGrainFrames(page, staticFrame, staticFrame);
+  assertWarmMonochromeGrain(desktopAnalysis);
+  expect(Math.abs(desktopAnalysis.luminance - staticAnalysis.luminance)).toBeLessThan(4);
+  expect(Math.abs(desktopAnalysis.spread - staticAnalysis.spread)).toBeLessThan(4);
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(formSection).toHaveAttribute('data-grain-state', 'paused');
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(220);
+  expect((await readGrainDrawTrace(page)).contact).toBe(0);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'visible',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(formSection).toHaveAttribute('data-grain-state', 'live');
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(formSection).toHaveAttribute('data-grain-state', 'paused');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(formSection).toHaveAttribute('data-grain-state', 'static');
+  await expect(canvas).toHaveCSS('opacity', '0');
+  await formSection.scrollIntoViewIfNeeded();
+  await expect(formSection).toHaveAttribute('data-grain-state', 'live');
+  await expect(formSection).toHaveAttribute('data-grain-quality', 'mobile');
+  await expectCanvasToCoverSurface(formSection);
+  expect(
+    await canvas.evaluate(
+      (element) =>
+        Math.round(
+          ((element as HTMLCanvasElement).width / element.getBoundingClientRect().width) * 100,
+        ) / 100,
+    ),
+  ).toBeLessThanOrEqual(0.91);
+  const mobileFirst = await canvas.screenshot();
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(1_100);
+  const mobileDraws = (await readGrainDrawTrace(page)).contact;
+  expect(mobileDraws).toBeGreaterThanOrEqual(13);
+  expect(mobileDraws).toBeLessThanOrEqual(16);
+  const mobileSecond = await canvas.screenshot();
+  const mobileAnalysis = await analyzeGrainFrames(page, mobileFirst, mobileSecond);
+  assertWarmMonochromeGrain(mobileAnalysis);
+  expect(Math.abs(mobileAnalysis.luminance - desktopAnalysis.luminance)).toBeLessThan(3);
+  expect(Math.abs(mobileAnalysis.spread - desktopAnalysis.spread)).toBeLessThan(3);
+  await hiddenContent.evaluate((element) => (element as HTMLElement).remove());
+
+  await canvas.dispatchEvent('webglcontextlost');
+  await expect(formSection).toHaveAttribute('data-grain-state', 'fallback');
+  await expect(formSection.getByLabel('Your name')).toBeVisible();
+
+  await page.reload();
+  const reloadedForm = getFormSection(page);
+  await reloadedForm.scrollIntoViewIfNeeded();
+  test.skip(
+    (await reloadedForm.getAttribute('data-grain-state')) === 'fallback',
+    'WebGL is unavailable',
+  );
+  await expect(reloadedForm).toHaveAttribute('data-grain-state', 'live');
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide')));
+  await expect(reloadedForm).toHaveAttribute('data-grain-state', 'static');
+  await resetGrainDrawTrace(page);
+  await page.waitForTimeout(220);
+  expect((await readGrainDrawTrace(page)).contact).toBe(0);
 });
 
 test('validates required fields with Zod and focuses the first error', async ({ page }) => {

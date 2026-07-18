@@ -74,6 +74,41 @@ const grainFragment = `
 const currentQuality = () =>
   QUALITY[window.matchMedia(MOBILE_QUERY).matches ? 'mobile' : 'desktop'];
 
+type GrainSurfaceParticipant = {
+  canRender: () => boolean;
+  root: HTMLElement;
+  setActive: (active: boolean) => void;
+};
+
+const grainSurfaces = new Set<GrainSurfaceParticipant>();
+let activeGrainSurface: GrainSurfaceParticipant | undefined;
+
+const visibleArea = ({ root }: GrainSurfaceParticipant) => {
+  const bounds = root.getBoundingClientRect();
+  const width = Math.max(Math.min(bounds.right, window.innerWidth) - Math.max(bounds.left, 0), 0);
+  const height = Math.max(Math.min(bounds.bottom, window.innerHeight) - Math.max(bounds.top, 0), 0);
+  return width * height;
+};
+
+const distanceFromViewportCenter = ({ root }: GrainSurfaceParticipant) => {
+  const bounds = root.getBoundingClientRect();
+  return Math.abs(bounds.top + bounds.height / 2 - window.innerHeight / 2);
+};
+
+const syncGrainSurfaces = () => {
+  const candidates = Array.from(grainSurfaces).filter((surface) => surface.canRender());
+  candidates.sort(
+    (left, right) =>
+      visibleArea(right) - visibleArea(left) ||
+      distanceFromViewportCenter(left) - distanceFromViewportCenter(right),
+  );
+  const nextSurface = candidates[0];
+
+  if (activeGrainSurface !== nextSurface) activeGrainSurface?.setActive(false);
+  activeGrainSurface = nextSurface;
+  activeGrainSurface?.setActive(true);
+};
+
 class GrainRenderer {
   private readonly geometry: Triangle;
   private readonly gl: OGLRenderingContext;
@@ -118,7 +153,7 @@ class GrainRenderer {
     if (!this.gl.getProgramParameter(this.program.program, this.gl.LINK_STATUS)) {
       this.program.remove();
       this.geometry.remove();
-      throw new Error('The capabilities grain shader failed to compile.');
+      throw new Error('The surface grain shader failed to compile.');
     }
 
     this.mesh = new Mesh(this.gl, { geometry: this.geometry, program: this.program });
@@ -157,7 +192,7 @@ class GrainRenderer {
   }
 }
 
-export const mountCapabilitiesGrain = (root: HTMLElement) => {
+export const mountSurfaceGrain = (root: HTMLElement) => {
   const canvas = root.querySelector<HTMLCanvasElement>('[data-grain-canvas]');
   if (!canvas) return () => {};
 
@@ -168,6 +203,7 @@ export const mountCapabilitiesGrain = (root: HTMLElement) => {
   let frame: number | undefined;
   let hasRendered = false;
   let lastRenderTime = 0;
+  let isCoordinatorActive = false;
   let isDocumentVisible = document.visibilityState === 'visible';
   let isSectionNearViewport = false;
 
@@ -182,7 +218,13 @@ export const mountCapabilitiesGrain = (root: HTMLElement) => {
   };
 
   const tick = (time: number) => {
-    if (disposed || !engine || !isDocumentVisible || !isSectionNearViewport) {
+    if (
+      disposed ||
+      !engine ||
+      !isCoordinatorActive ||
+      !isDocumentVisible ||
+      !isSectionNearViewport
+    ) {
       frame = undefined;
       return;
     }
@@ -201,13 +243,23 @@ export const mountCapabilitiesGrain = (root: HTMLElement) => {
 
   const syncLoop = () => {
     if (!engine) return;
-    if (isDocumentVisible && isSectionNearViewport) {
+    if (isCoordinatorActive && isDocumentVisible && isSectionNearViewport) {
       if (frame === undefined) frame = requestAnimationFrame(tick);
       return;
     }
     cancelLoop();
     setState(hasRendered ? 'paused' : 'static');
   };
+
+  const participant: GrainSurfaceParticipant = {
+    canRender: () => Boolean(engine && isDocumentVisible && isSectionNearViewport && !disposed),
+    root,
+    setActive: (active) => {
+      isCoordinatorActive = active;
+      syncLoop();
+    },
+  };
+  grainSurfaces.add(participant);
 
   const stop = (state: Extract<GrainPresentationState, 'fallback' | 'static'>) => {
     cancelLoop();
@@ -218,6 +270,7 @@ export const mountCapabilitiesGrain = (root: HTMLElement) => {
     canvas.height = 1;
     delete root.dataset.grainQuality;
     setState(state);
+    syncGrainSurfaces();
   };
 
   const start = () => {
@@ -226,7 +279,7 @@ export const mountCapabilitiesGrain = (root: HTMLElement) => {
     try {
       candidate = new GrainRenderer(root, canvas);
       engine = candidate;
-      syncLoop();
+      syncGrainSurfaces();
     } catch {
       candidate?.dispose();
       canvas.width = 1;
@@ -244,7 +297,7 @@ export const mountCapabilitiesGrain = (root: HTMLElement) => {
   };
   const handleVisibility = () => {
     isDocumentVisible = document.visibilityState === 'visible';
-    syncLoop();
+    syncGrainSurfaces();
   };
   const handleResize = () => {
     if (!engine) return;
@@ -252,7 +305,7 @@ export const mountCapabilitiesGrain = (root: HTMLElement) => {
     hasRendered = false;
     lastRenderTime = 0;
     setState('static');
-    syncLoop();
+    syncGrainSurfaces();
   };
   const handleContextLost = (event: Event) => {
     event.preventDefault();
@@ -267,9 +320,9 @@ export const mountCapabilitiesGrain = (root: HTMLElement) => {
   const intersectionObserver = new IntersectionObserver(
     ([entry]) => {
       isSectionNearViewport = Boolean(entry?.isIntersecting);
-      syncLoop();
+      syncGrainSurfaces();
     },
-    { rootMargin: '120px 0px', threshold: [0, 0.01] },
+    { threshold: [0, 0.01] },
   );
   intersectionObserver.observe(root);
 
@@ -280,14 +333,25 @@ export const mountCapabilitiesGrain = (root: HTMLElement) => {
   });
   document.addEventListener('visibilitychange', handleVisibility, { signal: controller.signal });
 
-  handleMotionPreference();
-
-  return () => {
+  const dispose = () => {
     if (disposed) return;
     disposed = true;
     controller.abort();
     intersectionObserver.disconnect();
     resizeObserver.disconnect();
+    grainSurfaces.delete(participant);
+    if (activeGrainSurface === participant) activeGrainSurface = undefined;
     stop('static');
   };
+  window.addEventListener(
+    'pagehide',
+    (event) => {
+      if (!event.persisted) dispose();
+    },
+    { signal: controller.signal },
+  );
+
+  handleMotionPreference();
+
+  return dispose;
 };

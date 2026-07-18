@@ -1,5 +1,13 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import {
+  analyzeGrainFrames,
+  expectCanvasToCoverSurface,
+  installGrainDrawTrace,
+  readGrainDrawTrace,
+  resetGrainDrawTrace,
+} from './grain-surface-helpers';
+
 const capabilitiesTitle = 'From first thought to finished thing.';
 const getCapabilities = (page: Page) => page.getByRole('region', { name: capabilitiesTitle });
 
@@ -10,115 +18,12 @@ const scrollCapabilitiesIntoView = async (page: Page) => {
   return capabilities;
 };
 
-const expectCanvasToCoverCapabilities = async (page: Page) => {
-  const capabilities = getCapabilities(page);
-  const [sectionBox, canvasBox] = await Promise.all([
-    capabilities.boundingBox(),
-    capabilities.locator('canvas').boundingBox(),
-  ]);
-  if (!sectionBox || !canvasBox) throw new Error('The capabilities grain geometry is unavailable.');
-  for (const property of ['x', 'y', 'width', 'height'] as const) {
-    expect(Math.abs(sectionBox[property] - canvasBox[property])).toBeLessThanOrEqual(1);
-  }
-};
-
 const expectStaticGrain = async (capabilities: Locator) => {
   await expect(capabilities.locator('.capabilities__grain')).toHaveCSS(
     'background-image',
     /capabilities-grain\.png/u,
   );
 };
-
-const installDrawTrace = (page: Page) =>
-  page.addInitScript(() => {
-    const state = window as typeof window & {
-      grainDraws: { capabilities: number; hero: number };
-    };
-    state.grainDraws = { capabilities: 0, hero: 0 };
-    for (const prototype of [WebGLRenderingContext.prototype, WebGL2RenderingContext.prototype]) {
-      const drawArrays = prototype.drawArrays;
-      Object.defineProperty(prototype, 'drawArrays', {
-        configurable: true,
-        value(this: WebGLRenderingContext, ...arguments_: unknown[]) {
-          const target =
-            this.canvas instanceof HTMLCanvasElement && this.canvas.matches('[data-grain-canvas]')
-              ? 'capabilities'
-              : 'hero';
-          state.grainDraws[target] += 1;
-          return Reflect.apply(drawArrays, this, arguments_);
-        },
-      });
-    }
-  });
-
-const resetDrawTrace = (page: Page) =>
-  page.evaluate(() => {
-    const state = window as typeof window & {
-      grainDraws: { capabilities: number; hero: number };
-    };
-    state.grainDraws = { capabilities: 0, hero: 0 };
-  });
-
-const readDrawTrace = (page: Page) =>
-  page.evaluate(
-    () =>
-      (
-        window as typeof window & {
-          grainDraws: { capabilities: number; hero: number };
-        }
-      ).grainDraws,
-  );
-
-const analyzeGrainFrames = (page: Page, first: Uint8Array, second: Uint8Array) =>
-  page.evaluate(
-    async ([firstEncoded, secondEncoded]) => {
-      const decode = async (encoded: string) => {
-        const response = await fetch(`data:image/png;base64,${encoded}`);
-        const bitmap = await createImageBitmap(await response.blob());
-        const canvas = document.createElement('canvas');
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        const context = canvas.getContext('2d');
-        if (!context) throw new Error('Grain analysis canvas is unavailable.');
-        context.drawImage(bitmap, 0, 0);
-        bitmap.close();
-        return context.getImageData(0, 0, canvas.width, canvas.height).data;
-      };
-      const [firstPixels, secondPixels] = await Promise.all([
-        decode(firstEncoded),
-        decode(secondEncoded),
-      ]);
-      let difference = 0;
-      let luminanceSum = 0;
-      let luminanceSquares = 0;
-      const channels = [0, 0, 0];
-      let count = 0;
-      for (let index = 0; index < firstPixels.length; index += 16) {
-        const red = firstPixels[index];
-        const green = firstPixels[index + 1];
-        const blue = firstPixels[index + 2];
-        const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
-        channels[0] += red;
-        channels[1] += green;
-        channels[2] += blue;
-        luminanceSum += luminance;
-        luminanceSquares += luminance * luminance;
-        difference +=
-          Math.abs(red - secondPixels[index]) +
-          Math.abs(green - secondPixels[index + 1]) +
-          Math.abs(blue - secondPixels[index + 2]);
-        count += 1;
-      }
-      const mean = luminanceSum / count;
-      return {
-        channels: channels.map((channel) => channel / count),
-        difference: difference / (count * 3),
-        luminance: mean,
-        spread: Math.sqrt(Math.max(luminanceSquares / count - mean * mean, 0)),
-      };
-    },
-    [Buffer.from(first).toString('base64'), Buffer.from(second).toString('base64')],
-  );
 
 test('keeps the complete capabilities experience above a non-interactive grain field', async ({
   page,
@@ -169,6 +74,7 @@ test('uses stable static grain without initializing WebGL for reduced motion', a
   });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
+  await page.addStyleTag({ content: 'astro-dev-toolbar { display: none !important; }' });
 
   const capabilities = getCapabilities(page);
   await capabilities.scrollIntoViewIfNeeded();
@@ -267,7 +173,7 @@ for (const failure of ['unsupported WebGL', 'shader initialization'] as const) {
 test('keeps static cover until the first frame and avoids overlapping offscreen GPU work', async ({
   page,
 }) => {
-  await installDrawTrace(page);
+  await installGrainDrawTrace(page);
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.goto('/');
 
@@ -278,38 +184,38 @@ test('keeps static cover until the first frame and avoids overlapping offscreen 
     'WebGL is unavailable',
   );
   await expect(capabilities.locator('canvas')).toHaveCSS('opacity', '0');
-  await resetDrawTrace(page);
+  await resetGrainDrawTrace(page);
   await page.waitForTimeout(220);
-  const initialDraws = await readDrawTrace(page);
+  const initialDraws = await readGrainDrawTrace(page);
   expect(initialDraws.capabilities).toBe(0);
 
   await capabilities.scrollIntoViewIfNeeded();
   await expect(capabilities).toHaveAttribute('data-grain-state', 'live');
-  await resetDrawTrace(page);
+  await resetGrainDrawTrace(page);
   await page.waitForTimeout(240);
-  const activeDraws = await readDrawTrace(page);
+  const activeDraws = await readGrainDrawTrace(page);
   expect(activeDraws.capabilities).toBeGreaterThan(1);
   expect(activeDraws.hero).toBeLessThanOrEqual(1);
 
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect(capabilities).toHaveAttribute('data-grain-state', 'paused');
-  await resetDrawTrace(page);
+  await resetGrainDrawTrace(page);
   await page.waitForTimeout(220);
-  const pausedDraws = await readDrawTrace(page);
+  const pausedDraws = await readGrainDrawTrace(page);
   expect(pausedDraws.capabilities).toBeLessThanOrEqual(1);
 
   await capabilities.scrollIntoViewIfNeeded();
   await expect(capabilities).toHaveAttribute('data-grain-state', 'live');
   await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
   await expect(capabilities).toHaveAttribute('data-grain-state', 'static');
-  await resetDrawTrace(page);
+  await resetGrainDrawTrace(page);
   await page.waitForTimeout(220);
-  const disposedDraws = await readDrawTrace(page);
+  const disposedDraws = await readGrainDrawTrace(page);
   expect(disposedDraws.capabilities).toBe(0);
 });
 
 test('runs live grain only while it can contribute and resumes coherently', async ({ page }) => {
-  await installDrawTrace(page);
+  await installGrainDrawTrace(page);
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.goto('/');
 
@@ -321,7 +227,7 @@ test('runs live grain only while it can contribute and resumes coherently', asyn
 
   const canvas = capabilities.locator('canvas');
   const heading = capabilities.getByRole('heading', { level: 2, name: capabilitiesTitle });
-  await expectCanvasToCoverCapabilities(page);
+  await expectCanvasToCoverSurface(capabilities);
   await expect(canvas).toHaveCSS('pointer-events', 'none');
   await expect(capabilities).toHaveAttribute('data-grain-quality', 'desktop');
   const desktopPixelRatio = await canvas.evaluate((element) => {
@@ -344,9 +250,9 @@ test('runs live grain only while it can contribute and resumes coherently', asyn
   const staticSurface = await canvas.screenshot();
   await staticOverride.evaluate((element) => (element as HTMLElement).remove());
   const first = await canvas.screenshot();
-  await resetDrawTrace(page);
+  await resetGrainDrawTrace(page);
   await page.waitForTimeout(1_100);
-  const liveDraws = await readDrawTrace(page);
+  const liveDraws = await readGrainDrawTrace(page);
   expect(liveDraws.capabilities).toBeGreaterThanOrEqual(16);
   expect(liveDraws.capabilities).toBeLessThanOrEqual(22);
   const second = await canvas.screenshot();
@@ -396,7 +302,7 @@ test('runs live grain only while it can contribute and resumes coherently', asyn
   await capabilities.scrollIntoViewIfNeeded();
   await expect(capabilities).toHaveAttribute('data-grain-state', 'live');
   await expect(capabilities).toHaveAttribute('data-grain-quality', 'mobile');
-  await expectCanvasToCoverCapabilities(page);
+  await expectCanvasToCoverSurface(capabilities);
   const mobilePixelRatio = await canvas.evaluate((element) => {
     const canvasElement = element as HTMLCanvasElement;
     return canvasElement.width / canvasElement.getBoundingClientRect().width;
@@ -407,9 +313,9 @@ test('runs live grain only while it can contribute and resumes coherently', asyn
     content: '.capabilities__inner { visibility: hidden !important; }',
   });
   const mobileFirst = await canvas.screenshot();
-  await resetDrawTrace(page);
+  await resetGrainDrawTrace(page);
   await page.waitForTimeout(1_100);
-  const mobileDraws = await readDrawTrace(page);
+  const mobileDraws = await readGrainDrawTrace(page);
   expect(mobileDraws.capabilities).toBeGreaterThanOrEqual(13);
   expect(mobileDraws.capabilities).toBeLessThanOrEqual(16);
   const mobileSecond = await canvas.screenshot();

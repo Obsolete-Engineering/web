@@ -50,12 +50,24 @@ import PricingResult from './PricingResult.astro';
         class="pricing-estimator__result"
         id="pricing-result"
         aria-label={copy.resultLabel}
+        data-grain-state="static"
+        data-surface-grain
+        data-pricing-grain
         data-pricing-result
       >
-        <div class="pricing-estimator__neutral">
-          <p>{copy.neutral.eyebrow}</p>
-          <h3>{copy.neutral.title}</h3>
-          <span>{copy.neutral.body}</span>
+        <div class="pricing-estimator__grain" aria-hidden="true" data-grain-layer>
+          <canvas data-grain-canvas></canvas>
+        </div>
+        <div
+          class="pricing-estimator__result-content"
+          data-grain-content
+          data-pricing-result-content
+        >
+          <div class="pricing-estimator__neutral">
+            <p>{copy.neutral.eyebrow}</p>
+            <h3>{copy.neutral.title}</h3>
+            <span>{copy.neutral.body}</span>
+          </div>
         </div>
       </section>
     </div>
@@ -81,8 +93,17 @@ import PricingResult from './PricingResult.astro';
         <h3>{copy.noScriptTitle}</h3>
         {
           copy.engagements.map((engagement) => (
-            <div class="pricing-estimator__fallback-result">
-              <PricingResult engagement={engagement} />
+            <div
+              class="pricing-estimator__fallback-result"
+              data-grain-state="static"
+              data-surface-grain
+            >
+              <div class="pricing-estimator__grain" aria-hidden="true" data-grain-layer>
+                <canvas data-grain-canvas></canvas>
+              </div>
+              <div class="pricing-estimator__fallback-content" data-grain-content>
+                <PricingResult engagement={engagement} />
+              </div>
             </div>
           ))
         }
@@ -241,6 +262,11 @@ import PricingResult from './PricingResult.astro';
     color: var(--color-on-primary);
     min-width: 0;
     padding: clamp(28px, 4vw, 56px);
+  }
+
+  .pricing-estimator__result-content,
+  .pricing-estimator__fallback-content {
+    min-width: 0;
   }
 
   .pricing-estimator__result {

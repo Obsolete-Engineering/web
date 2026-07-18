@@ -36,6 +36,22 @@ _Avoid_: Foundation-model research, model lab
 A team that owns a customer-facing digital product and values distinctiveness as much as utility.
 _Avoid_: Any business, companies exploring AI
 
+**Contact sculpture**:
+An abstract field of dense, ink-black contour strands folded around a large left-facing void that remains open to the orange contact field and returns attention toward the invitation. Its camera, orientation, and overall silhouette remain fixed; at rest only minute strand tension shifts create a near-still “breath.” Pointer proximity creates a shallow local dent, while a click deepens the press and releases one controlled ripple with elastic lag. Rapid clicks merge into the active ripple and redirect its origin within a capped energy budget rather than stacking waves. Smooth response takes priority over strand count or render resolution; a static mesh poster preserves its place when live 3D is unavailable, reduced motion is requested, or adaptive quality cannot sustain fluid motion.
+_Avoid_: Contact mascot, idea visualizer, particle-cloud reprise, woven grid, triangulated wireframe, sphere, torus, camera parallax, rotating or drag-to-spin object, sound effects
+
+**Contact stage**:
+The upper contact composition, enabled only at 1024px or wider with a fine hover pointer, in which the invitation headline and Contact sculpture act as equal visual leads with roughly a 55/45 split and a controlled crop at the sculpture’s right edge. Fit guidance and the inquiry row span beneath both; smaller screens retain the existing text-led stacked composition without the sculpture.
+_Avoid_: Full-width desktop headline with side decoration, sculpture-dominated contact section, mobile sculpture, text overlap, interaction instructions, custom contact cursor
+
+**Contact tension reveal**:
+The once-per-page-visit contact-stage entrance in which a loose compressed mesh pulls taut into the folded void as the orange takeover and invitation copy settle together. Pointer interaction remains quiet until the resolved silhouette has settled, then becomes available immediately; later scroll returns show the resolved interactive form.
+_Avoid_: Spinning product-render entrance, independent draw-on effect, unrelated motion montage
+
+**Conversion-safe spectacle**:
+A memorable contact payoff that invites brief exploration without delaying, obscuring, or visually demoting the project-inquiry message and action.
+_Avoid_: Decorative afterthought, interaction-first toy, technical showcase
+
 **Interactive process field**:
 A warm-paper, ink-line diagram that connects AI product outcomes to the AI product judgment loop through restrained pointer and focus responses, using orange only for active connections and remaining understandable without interaction.
 _Avoid_: Fake chat interface, neural-network motif, decorative node map

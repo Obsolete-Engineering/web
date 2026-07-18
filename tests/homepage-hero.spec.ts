@@ -439,6 +439,7 @@ test('keeps the poster and complete hero available without JavaScript', async ({
   const hero = getHero(page);
   await expect(hero).toBeVisible();
   await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
+  await expect(hero.locator('[data-fluid-poster]')).toHaveCSS('opacity', '1');
   await expectCurrentHeroComposition(page);
   await context.close();
 });
@@ -484,6 +485,44 @@ test('falls back without errors when WebGL is unavailable', async ({ page }) => 
   await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
   await expectCurrentHeroComposition(page);
   expect(errors).toEqual([]);
+});
+
+test('begins an eligible desktop view on warm paper with a faint field', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 640 });
+  await page.addInitScript(() => {
+    let frameId = 0;
+    Object.defineProperty(window, 'requestAnimationFrame', {
+      configurable: true,
+      value: () => {
+        frameId += 1;
+        return frameId;
+      },
+    });
+  });
+  await page.goto('/');
+
+  const initial = await getHero(page).evaluate((hero) => {
+    const poster = hero.querySelector<HTMLElement>('[data-fluid-poster]');
+    const heading = hero.querySelector<HTMLElement>('#hero-title');
+    const action = hero.querySelector<HTMLAnchorElement>('.hero__action--primary');
+    if (!poster || !heading || !action) throw new Error('The initial hero is incomplete.');
+    return {
+      actionTarget: action.getAttribute('href'),
+      ceremony: hero.dataset.ceremonyState,
+      fluid: hero.dataset.fluidState,
+      headingVisibility: getComputedStyle(heading).visibility,
+      posterOpacity: Number(getComputedStyle(poster).opacity),
+    };
+  });
+
+  test.skip(initial.ceremony === 'skipped', 'WebGL is unavailable');
+  expect(initial).toEqual({
+    actionTarget: '/contact#project-inquiry',
+    ceremony: 'eligible',
+    fluid: 'poster',
+    headingVisibility: 'visible',
+    posterOpacity: 0.22,
+  });
 });
 
 test('awakens the first eligible desktop field from the rendered period without a reset', async ({

@@ -2,6 +2,8 @@
 import { Font } from 'astro:assets';
 import logo from '../assets/img/logo.png';
 import Header from '../components/Header.astro';
+import Analytics from '@vercel/analytics/astro'
+
 import { accessibilityCopy, metaCopy } from '../copy';
 import '../styles/global.css';
 
@@ -76,5 +78,6 @@ const structuredData = {
     <main id="content" tabindex="-1">
       <slot />
     </main>
+    <Analytics/>
   </body>
 </html>

@@ -1,8 +1,8 @@
 export const metaCopy = {
   siteName: 'Obsolete',
-  title: 'Obsolete | Creative technology for interesting ideas',
+  title: 'Obsolete | Custom websites and digital products',
   description:
-    'Obsolete is a creative technology studio designing and building ambitious digital experiences for creative companies.',
+    'Obsolete is a creative technology studio designing and building custom websites and digital products for creative companies.',
   imageAlt: 'Obsolete, creative technology studio.',
 } as const;
 
@@ -157,9 +157,9 @@ export const featuredWorkCopy = {
     firstLine: 'Craft',
     secondLine: ' Applied',
   },
-  statement: 'A clearer, faster home for a multidisciplinary digital studio.',
+  statement: 'A complex offer, made clear.',
   summary:
-    'We designed and developed a content-rich website that turns a broad service offering into a clear journey, from capabilities and technology to selected work, editorial thinking, and contact.',
+    'We organized six disciplines into a clear service model, then designed and engineered a live, content-rich website with reusable work and editorial publishing patterns and an accessible, responsive interface.',
   imageAlt:
     'The Craft Applied homepage, with cream typography on a deep green background describing its website and application work.',
   captions: {
@@ -514,7 +514,7 @@ export const heroCopy = {
     lastLine: 'interesting',
     punctuation: '.',
   },
-  lead: 'Obsolete is a creative technology studio for creative companies. We design and engineer ambitious digital experiences worth spending time with.',
+  lead: 'Obsolete designs and builds custom websites and digital products for creative companies, with creative direction, design, and engineering held by one team from idea to launch.',
   actionsAriaLabel: 'Hero actions',
   actions: {
     primary: {

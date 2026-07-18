@@ -126,7 +126,14 @@ test('preserves the approved proposition, actions, and stable masthead', async (
   await expect(page.getByRole('heading', { level: 1, name: title })).toHaveCount(1);
   await expect(hero.getByText('Creative technology studio', { exact: true })).toBeVisible();
   await expect(
-    hero.getByText(/Obsolete is a creative technology studio for creative companies/iu),
+    hero.getByText(
+      /designs and builds custom websites and digital products for creative companies/iu,
+    ),
+  ).toBeVisible();
+  await expect(
+    hero.getByText(
+      /creative direction, design, and engineering held by one team from idea to launch/iu,
+    ),
   ).toBeVisible();
   await expect(hero.getByRole('link', { name: 'Bring us an idea' })).toHaveAttribute(
     'href',
@@ -151,6 +158,48 @@ test('preserves the approved proposition, actions, and stable masthead', async (
   expect(heroBox?.height).toBe(900);
   expect(firstLineBox?.y).toBeLessThan(middleBox?.y ?? 0);
   expect(Math.abs((middleBox?.y ?? 0) - (lastBox?.y ?? 0))).toBeLessThan(2);
+});
+
+test('describes the concrete offer in page metadata', async ({ page }) => {
+  await page.goto('/');
+
+  await expect(page).toHaveTitle('Obsolete | Custom websites and digital products');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    'content',
+    /creative technology studio.+custom websites and digital products for creative companies/iu,
+  );
+});
+
+test('puts documented Craft Applied proof directly after the proposition', async ({ page }) => {
+  await page.goto('/');
+
+  const sections = page.getByRole('region');
+  const featuredWork = page.getByRole('region', { name: 'Craft Applied' });
+
+  await expect(featuredWork).toBeVisible();
+  await expect(sections.nth(0)).toHaveAccessibleName(title);
+  await expect(sections.nth(1)).toHaveAccessibleName('Craft Applied');
+  await expect(sections.nth(2)).toHaveAccessibleName('From first thought to finished thing.');
+
+  await expect(featuredWork.getByText('A complex offer, made clear.')).toBeVisible();
+  await expect(featuredWork.getByText(/six disciplines.+clear service model/iu)).toBeVisible();
+  await expect(
+    featuredWork.getByText(/reusable work and editorial publishing patterns/iu),
+  ).toBeVisible();
+  await expect(featuredWork.getByText(/accessible, responsive interface/iu)).toBeVisible();
+  await expect(
+    featuredWork.getByText('Design + development / Live', { exact: true }),
+  ).toBeVisible();
+  await expect(featuredWork.getByText('Design + development', { exact: true })).toBeVisible();
+  await expect(featuredWork.getByText(/Astro, SolidJS, TailwindCSS, Plausible/iu)).toBeVisible();
+  await expect(featuredWork.getByText(/\bfaster\b/iu)).toHaveCount(0);
+  await expect(featuredWork.getByRole('link', { name: 'View case study' })).toHaveAttribute(
+    'href',
+    '/work/craft-applied',
+  );
+  await expect(
+    featuredWork.getByRole('link', { name: 'Visit Craft Applied (external site)' }),
+  ).toHaveAttribute('href', 'https://craftapplied.com');
 });
 
 for (const viewport of viewports) {
@@ -212,7 +261,9 @@ test('reflows at 200% text size without hiding content or actions', async ({ pag
 
   const hero = getHero(page);
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
-  await expect(hero.getByText(/creative technology studio for creative companies/iu)).toBeVisible();
+  await expect(
+    hero.getByText(/custom websites and digital products for creative companies/iu),
+  ).toBeVisible();
   await expect(hero.getByRole('link', { name: 'Bring us an idea' })).toBeVisible();
   await expect(hero.getByRole('link', { name: 'See our work' })).toBeVisible();
   await expectNoHorizontalOverflow(page);

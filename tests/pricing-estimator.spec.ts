@@ -63,6 +63,11 @@ test('sits between featured work and the closing contact invitation in a neutral
   ).toBe(true);
 
   await expect(estimator.getByText('Choose an engagement')).toBeVisible();
+  await expect(
+    estimator.getByText(
+      /Every range assumes a defined scope, one feedback lead, and two revision rounds/iu,
+    ),
+  ).toBeVisible();
   await expect(estimator.getByRole('link', { name: 'Start a conversation' })).toHaveCount(0);
 
   await Promise.all(

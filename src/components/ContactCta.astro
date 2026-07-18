@@ -14,12 +14,25 @@ import { contactCtaCopy } from '../copy';
     <div class="contact-cta__body">
       <h2 id="contact-cta-title" data-motion="contact-copy">{contactCtaCopy.title}</h2>
 
-      <div class="contact-cta__invitation">
-        <p data-motion="contact-copy">{contactCtaCopy.body}</p>
-        <a href={contactCtaCopy.action.href}>
-          <span>{contactCtaCopy.action.label}</span>
-          <span aria-hidden="true">{contactCtaCopy.action.suffix}</span>
-        </a>
+      <div class="contact-cta__decision">
+        <div class="contact-cta__fit">
+          <article data-motion="contact-copy">
+            <h3>{contactCtaCopy.goodFit.label}</h3>
+            <p>{contactCtaCopy.goodFit.body}</p>
+          </article>
+          <article data-motion="contact-copy">
+            <h3>{contactCtaCopy.nonFit.label}</h3>
+            <p>{contactCtaCopy.nonFit.body}</p>
+          </article>
+        </div>
+
+        <div class="contact-cta__invitation">
+          <p data-motion="contact-copy">{contactCtaCopy.body}</p>
+          <a href={contactCtaCopy.action.href}>
+            <span>{contactCtaCopy.action.label}</span>
+            <span aria-hidden="true">{contactCtaCopy.action.suffix}</span>
+          </a>
+        </div>
       </div>
     </div>
   </div>
@@ -91,6 +104,41 @@ import { contactCtaCopy } from '../copy';
     max-width: 1160px;
   }
 
+  .contact-cta__decision {
+    display: grid;
+    gap: clamp(40px, 6vw, 80px);
+  }
+
+  .contact-cta__fit {
+    border-top: 1px solid color-mix(in srgb, var(--color-on-tertiary) 35%, transparent);
+    display: grid;
+    gap: clamp(28px, 4vw, 56px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-top: 20px;
+  }
+
+  .contact-cta__fit article {
+    display: grid;
+    gap: 12px;
+    max-width: 520px;
+  }
+
+  .contact-cta__fit h3 {
+    font-family: var(--font-mono);
+    font-size: var(--type-label-sm-size);
+    font-weight: 600;
+    letter-spacing: var(--type-label-sm-letter-spacing);
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .contact-cta__fit p,
+  .contact-cta__invitation p {
+    font-size: clamp(1rem, 1.4vw, 1.25rem);
+    letter-spacing: -0.012em;
+    line-height: 1.5;
+  }
+
   .contact-cta__invitation {
     align-items: end;
     border-top: 1px solid color-mix(in srgb, var(--color-on-tertiary) 35%, transparent);
@@ -101,9 +149,6 @@ import { contactCtaCopy } from '../copy';
   }
 
   .contact-cta__invitation p {
-    font-size: clamp(1rem, 1.4vw, 1.25rem);
-    letter-spacing: -0.012em;
-    line-height: 1.5;
     max-width: 520px;
   }
 
@@ -155,6 +200,10 @@ import { contactCtaCopy } from '../copy';
 
     h2 {
       font-size: clamp(3.25rem, 15vw, 4.25rem);
+    }
+
+    .contact-cta__fit {
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .contact-cta__invitation {

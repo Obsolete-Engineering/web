@@ -204,7 +204,7 @@ export const pricingEstimatorCopy = {
   eyebrow: 'Project pricing / Indicative',
   title: 'A useful range, before the brief.',
   introduction:
-    'Choose the engagement closest to what you are making. Each range covers a tightly bounded direction, design, and engineering process.',
+    'Choose the engagement closest to what you are making. Every range assumes a defined scope, one feedback lead, and two revision rounds.',
   optionsLabel: 'Engagement options',
   neutral: {
     eyebrow: 'Your estimate',
@@ -491,8 +491,20 @@ export const capabilitiesCopy = {
 export const contactCtaCopy = {
   eyebrow: 'Have something in mind?',
   title: 'Bring us the idea you cannot stop thinking about.',
-  body: 'Early sketch, complicated brief, or fully formed plan. We would like to hear what makes it interesting.',
-  action: startConversationActionCopy,
+  body: 'An unfinished brief is welcome. Bring the rough idea and tell us what you want to make, who it is for, and what is getting in the way.',
+  goodFit: {
+    label: 'Good fit',
+    body: 'A distinctive idea, complex story, or product interaction that a template will not solve well.',
+  },
+  nonFit: {
+    label: 'Likely not a fit',
+    body: 'Commodity production, an unlimited brief, or AI added without a clear user outcome.',
+  },
+  action: {
+    label: 'Start a project inquiry',
+    href: '/contact#project-inquiry',
+    suffix: '↗',
+  },
 } as const;
 
 export const obsoleteHeroAnimationCopy = {

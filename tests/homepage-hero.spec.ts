@@ -173,13 +173,31 @@ test('describes the concrete offer in page metadata', async ({ page }) => {
 test('puts documented Craft Applied proof directly after the proposition', async ({ page }) => {
   await page.goto('/');
 
-  const sections = page.getByRole('region');
   const featuredWork = page.getByRole('region', { name: 'Craft Applied' });
+  const orderedSections = [
+    getHero(page),
+    featuredWork,
+    page.getByRole('region', { name: 'From first thought to finished thing.' }),
+    page.getByRole('region', { name: 'AI should earn its place.' }),
+    page.getByRole('region', { name: 'Project pricing estimator' }),
+    page.getByRole('region', { name: 'Bring us the idea you cannot stop thinking about.' }),
+  ];
 
-  await expect(featuredWork).toBeVisible();
-  await expect(sections.nth(0)).toHaveAccessibleName(title);
-  await expect(sections.nth(1)).toHaveAccessibleName('Craft Applied');
-  await expect(sections.nth(2)).toHaveAccessibleName('From first thought to finished thing.');
+  await Promise.all(orderedSections.map((section) => expect(section).toBeVisible()));
+  const orderChecks = await Promise.all(
+    orderedSections
+      .slice(0, -1)
+      .map(async (current, index) =>
+        current.evaluate(
+          (element, following) =>
+            Boolean(
+              element.compareDocumentPosition(following as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
+            ),
+          await orderedSections[index + 1].elementHandle(),
+        ),
+      ),
+  );
+  expect(orderChecks).toEqual(orderedSections.slice(1).map(() => true));
 
   await expect(featuredWork.getByText('A complex offer, made clear.')).toBeVisible();
   await expect(featuredWork.getByText(/six disciplines.+clear service model/iu)).toBeVisible();

@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import desktopImage from '../assets/img/craft-applied-desktop.jpg';
+import workHeroImage from '../assets/img/obsolete/mali2.png';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { workPageCopy as copy } from '../copy';
 ---
@@ -12,15 +13,34 @@ import { workPageCopy as copy } from '../copy';
   imageAlt={copy.project.imageAlt}
 >
   <header class="work-index__hero">
-    <div class="work-index__inner">
-      <p class="work-index__eyebrow">
-        <span aria-hidden="true"></span>
-        {copy.eyebrow}
-      </p>
-      <div class="work-index__heading">
-        <h1>{copy.title}</h1>
-        <p>{copy.introduction}</p>
+    <div class="work-index__inner work-index__hero-grid">
+      <div class="work-index__hero-copy">
+        <p class="work-index__eyebrow">
+          <span aria-hidden="true"></span>
+          {copy.eyebrow}
+        </p>
+        <div class="work-index__heading">
+          <h1>{copy.title}</h1>
+          <p>{copy.introduction}</p>
+        </div>
       </div>
+
+      <figure class="work-index__artwork">
+        <div class="work-index__art">
+          <Image
+            src={workHeroImage}
+            alt=""
+            aria-hidden="true"
+            layout="full-width"
+            loading="eager"
+            fetchpriority="high"
+          />
+        </div>
+        <figcaption>
+          <span>Visual study / 02</span>
+          <span>Ideas → systems</span>
+        </figcaption>
+      </figure>
     </div>
   </header>
 
@@ -69,19 +89,31 @@ import { workPageCopy as copy } from '../copy';
   }
 
   .work-index__hero {
-    padding-block: clamp(56px, 8vw, 112px) clamp(80px, 10vw, 152px);
+    padding-block: clamp(32px, 4vw, 64px) clamp(48px, 6vw, 88px);
+  }
+
+  .work-index__hero-grid {
+    display: grid;
+    gap: clamp(40px, 6vw, 96px);
+    grid-template-columns: minmax(0, 0.95fr) minmax(420px, 0.75fr);
+  }
+
+  .work-index__hero-copy {
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    flex-direction: column;
+    min-height: clamp(620px, calc(100svh - 152px), 820px);
+    padding-top: 14px;
   }
 
   .work-index__eyebrow {
     align-items: center;
-    border-top: 1px solid var(--color-line);
     display: flex;
     font-family: var(--font-mono);
     font-size: 0.6875rem;
     font-weight: 500;
     gap: 12px;
     letter-spacing: 0.055em;
-    padding-top: 14px;
     text-transform: uppercase;
   }
 
@@ -92,25 +124,69 @@ import { workPageCopy as copy } from '../copy';
   }
 
   .work-index__heading {
-    align-items: end;
-    display: grid;
-    gap: clamp(48px, 9vw, 150px);
-    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
-    margin-top: clamp(80px, 12vw, 180px);
+    display: flex;
+    flex: 1;
+    flex-direction: column;
   }
 
   h1 {
-    font-size: clamp(4.5rem, 10vw, 9rem);
+    font-size: clamp(4.5rem, 7vw, 7rem);
     font-weight: 600;
     letter-spacing: -0.072em;
     line-height: 0.82;
+    margin-top: clamp(88px, 11vw, 156px);
+    max-width: 760px;
   }
 
   .work-index__heading > p {
+    border-top: 1px solid var(--color-line);
     color: var(--color-secondary);
     font-size: clamp(1.125rem, 1.7vw, 1.375rem);
     line-height: 1.5;
+    margin-top: auto;
     max-width: 460px;
+    padding-top: 20px;
+  }
+
+  .work-index__artwork {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    margin: 0;
+    min-height: clamp(620px, calc(100svh - 152px), 820px);
+    overflow: hidden;
+  }
+
+  .work-index__art {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .work-index__art img {
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    width: 100%;
+  }
+
+  .work-index__artwork figcaption {
+    align-items: center;
+    background: var(--color-surface-raised);
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    font-family: var(--font-mono);
+    font-size: var(--type-label-sm-size);
+    font-weight: var(--type-label-sm-weight);
+    justify-content: space-between;
+    letter-spacing: var(--type-label-sm-letter-spacing);
+    min-height: 52px;
+    padding-inline: 16px;
+    text-transform: uppercase;
+  }
+
+  .work-index__artwork figcaption span:last-child {
+    color: var(--color-secondary);
   }
 
   .work-index__projects {
@@ -173,20 +249,20 @@ import { workPageCopy as copy } from '../copy';
     max-width: 520px;
   }
 
-  figure {
+  .project figure {
     background: #00853e;
     border: 1px solid var(--color-line);
     margin: 0;
     overflow: hidden;
   }
 
-  figure img {
+  .project figure img {
     height: auto;
     transition: transform 400ms ease;
     width: 100%;
   }
 
-  figcaption {
+  .project figcaption {
     align-items: center;
     background: var(--color-surface-raised);
     border-top: 1px solid var(--color-line);
@@ -200,7 +276,7 @@ import { workPageCopy as copy } from '../copy';
     padding-inline: 16px;
   }
 
-  figcaption span:last-child {
+  .project figcaption span:last-child {
     color: var(--color-tertiary);
     font-size: 1rem;
     transition: transform var(--transition-fast);
@@ -214,14 +290,31 @@ import { workPageCopy as copy } from '../copy';
     transform: translateX(5px);
   }
 
+  @media (max-width: 900px) {
+    .work-index__hero-grid {
+      gap: 64px;
+      grid-template-columns: 1fr;
+    }
+
+    .work-index__hero-copy {
+      min-height: 600px;
+    }
+
+    .work-index__artwork {
+      min-height: 0;
+    }
+
+    .work-index__art img {
+      height: auto;
+    }
+  }
+
   @media (max-width: 800px) {
-    .work-index__heading,
     .project__heading {
       align-items: start;
       grid-template-columns: 1fr;
     }
 
-    .work-index__heading > p,
     .project__heading > div {
       max-width: 620px;
     }
@@ -229,26 +322,31 @@ import { workPageCopy as copy } from '../copy';
 
   @media (max-width: 700px) {
     .work-index__hero {
-      padding-top: 40px;
+      padding-top: 24px;
     }
 
-    .work-index__heading {
-      margin-top: 72px;
+    .work-index__hero-copy {
+      min-height: 540px;
     }
 
     h1 {
-      font-size: clamp(4rem, 20vw, 5.5rem);
+      font-size: clamp(3.75rem, 18vw, 5.25rem);
+      margin-top: 72px;
     }
 
     h2 {
       font-size: clamp(3.75rem, 17vw, 5rem);
     }
 
+    .work-index__artwork figcaption {
+      font-size: 0.625rem;
+    }
+
     .project__rail span:last-child {
       text-align: right;
     }
 
-    figure img {
+    .project figure img {
       min-height: 300px;
       object-fit: cover;
       object-position: center;
@@ -256,8 +354,8 @@ import { workPageCopy as copy } from '../copy';
   }
 
   @media (prefers-reduced-motion: reduce) {
-    figure img,
-    figcaption span:last-child {
+    .project figure img,
+    .project figcaption span:last-child {
       transition: none;
     }
   }

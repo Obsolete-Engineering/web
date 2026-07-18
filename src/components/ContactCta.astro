@@ -1,5 +1,17 @@
 ---
 import { contactCtaCopy } from '../copy';
+
+const contourStrands = Array.from({ length: 52 }, (_, index) => {
+  const y = 42 + index * 10.6;
+  const bend = Math.sin(index * 0.46) * 26;
+  const counterBend = Math.cos(index * 0.31) * 18;
+
+  return {
+    d: `M 0 ${y} C 132 ${y + bend}, 238 ${y - bend - counterBend}, 354 ${y + bend * 0.4} S 566 ${y - bend * 0.72}, 760 ${y + counterBend}`,
+    opacity: 0.76 + (index % 5) * 0.045,
+    width: index % 7 === 0 ? 6.4 : 4.6,
+  };
+});
 ---
 
 <section class="contact-cta" aria-labelledby="contact-cta-title" data-motion-section="contact">
@@ -12,7 +24,58 @@ import { contactCtaCopy } from '../copy';
     </p>
 
     <div class="contact-cta__body">
-      <h2 id="contact-cta-title" data-motion="contact-copy">{contactCtaCopy.title}</h2>
+      <div class="contact-cta__upper-stage" data-contact-upper-stage>
+        <h2 id="contact-cta-title" data-motion="contact-copy">{contactCtaCopy.title}</h2>
+
+        <div class="contact-cta__sculpture" data-contact-sculpture aria-hidden="true">
+          <svg viewBox="0 0 720 620" preserveAspectRatio="xMidYMid meet" focusable="false">
+            <defs>
+              <clipPath id="contact-sculpture-silhouette">
+                <path
+                  d="M 130 28 C 260 -2 462 18 604 88 C 698 134 746 220 748 322 C 750 442 696 548 588 594 C 454 650 258 608 132 532 C 56 486 28 408 38 306 C 48 190 62 76 130 28 Z"
+                ></path>
+              </clipPath>
+              <mask id="contact-sculpture-void">
+                <rect width="720" height="620" fill="white"></rect>
+                <path
+                  d="M -40 224 C 82 152 238 166 358 270 C 288 286 250 326 250 374 C 250 428 286 470 346 506 C 216 522 68 472 -40 392 Z"
+                  fill="black"
+                ></path>
+              </mask>
+            </defs>
+
+            <g
+              clip-path="url(#contact-sculpture-silhouette)"
+              mask="url(#contact-sculpture-void)"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+            >
+              <path
+                class="contact-cta__sculpture-shadow"
+                d="M 102 46 C 292 6 562 58 664 170 C 752 268 728 458 612 548 C 490 642 232 590 106 488"
+              ></path>
+              {
+                contourStrands.map((strand) => (
+                  <path
+                    d={strand.d}
+                    stroke-opacity={strand.opacity}
+                    stroke-width={strand.width}
+                  ></path>
+                ))
+              }
+              <path
+                class="contact-cta__sculpture-fold"
+                d="M 430 52 C 366 146 398 226 498 286 C 574 332 592 426 526 574"
+              ></path>
+              <path
+                class="contact-cta__sculpture-fold"
+                d="M 548 72 C 486 170 510 250 610 320 C 672 364 672 454 612 548"
+              ></path>
+            </g>
+          </svg>
+        </div>
+      </div>
 
       <div class="contact-cta__decision">
         <div class="contact-cta__fit">
@@ -43,6 +106,7 @@ import { contactCtaCopy } from '../copy';
     background: var(--color-tertiary);
     color: var(--color-on-tertiary);
     isolation: isolate;
+    overflow-x: clip;
     padding: clamp(72px, 9vw, 128px) clamp(20px, 3.34vw, 48px) clamp(40px, 5vw, 72px);
     position: relative;
   }
@@ -96,12 +160,38 @@ import { contactCtaCopy } from '../copy';
     gap: clamp(64px, 10vw, 144px);
   }
 
+  .contact-cta__upper-stage {
+    display: block;
+  }
+
   h2 {
     font-size: clamp(3.75rem, 8.4vw, 7.5rem);
     font-weight: 600;
     letter-spacing: -0.068em;
     line-height: 0.88;
     max-width: 1160px;
+  }
+
+  .contact-cta__sculpture {
+    color: var(--color-primary);
+    display: none;
+    pointer-events: none;
+  }
+
+  .contact-cta__sculpture svg {
+    height: 100%;
+    overflow: visible;
+    width: 100%;
+  }
+
+  .contact-cta__sculpture-shadow {
+    opacity: 0.12;
+    stroke-width: 72px;
+  }
+
+  .contact-cta__sculpture-fold {
+    opacity: 0.92;
+    stroke-width: 9px;
   }
 
   .contact-cta__decision {
@@ -178,6 +268,30 @@ import { contactCtaCopy } from '../copy';
 
   .contact-cta__invitation a span:last-child {
     font-size: 1rem;
+  }
+
+  @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+    .contact-cta__upper-stage {
+      align-items: center;
+      display: grid;
+      grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+      min-height: clamp(460px, 43vw, 610px);
+    }
+
+    .contact-cta__upper-stage h2 {
+      max-width: none;
+      position: relative;
+      z-index: 1;
+    }
+
+    .contact-cta__sculpture {
+      align-self: stretch;
+      display: grid;
+      margin-block: clamp(-36px, -2.5vw, -20px);
+      margin-right: clamp(-124px, -8vw, -80px);
+      place-items: center;
+      width: calc(100% + max(96px, (100vw - 1344px) / 2 + 48px));
+    }
   }
 
   @media (max-width: 700px) {

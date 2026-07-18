@@ -117,8 +117,10 @@ export const displayFragment = `
   uniform vec2 uCeremonyOrigin;
   uniform vec2 uCssResolution;
   uniform vec2 uDyeTexelSize;
+  uniform vec2 uQuietPointer;
   uniform float uCeremonyImpulse;
   uniform float uCeremonyProgress;
+  uniform float uQuietPointerStrength;
   uniform float uTime;
 
   float hash21(vec2 point) {
@@ -183,6 +185,12 @@ export const displayFragment = `
     pressureResponse += exp(-impulseDistance * 2.6) * 0.22;
     pressureResponse *= uCeremonyImpulse;
 
+    vec2 quietPointerOffset = vUv - uQuietPointer;
+    quietPointerOffset.x *= aspect;
+    float quietPointerDistance = length(quietPointerOffset);
+    float quietPointerResponse = exp(-dot(quietPointerOffset, quietPointerOffset) / 0.012);
+    quietPointerResponse *= uQuietPointerStrength;
+
     float slowTime = uTime * 0.115;
     vec2 ambientOffset = vec2(
       sin(centered.y * 5.2 + slowTime) + sin(centered.x * 2.3 - slowTime * 0.61),
@@ -205,6 +213,8 @@ export const displayFragment = `
     interactiveOffset += dyeGradient * vec2(22.0, -22.0) + trailDrift;
     vec2 pressureDirection = impulseOffset / max(impulseDistance, 0.001);
     interactiveOffset += pressureDirection * pressureResponse * 5.5;
+    vec2 quietPointerDirection = quietPointerOffset / max(quietPointerDistance, 0.001);
+    interactiveOffset += quietPointerDirection * quietPointerResponse * 3.2;
     vec2 warpedPixel = pixel + ambientOffset + interactiveOffset;
 
     vec2 field = centered;

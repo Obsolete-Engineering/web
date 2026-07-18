@@ -17,15 +17,24 @@ const { variant = 'paper' } = Astro.props;
 >
   <div class="site-header__inner">
     <div class="site-header__identity">
-      <a class="site-header__wordmark" href="/" aria-label={headerCopy.wordmarkAriaLabel}>
+      <a
+        class="site-header__wordmark"
+        href="/"
+        aria-label={headerCopy.wordmarkAriaLabel}
+        data-ceremony-part="identity"
+      >
         <Image class="site-header__wordmark-logo" src={logoUrl} alt="" aria-hidden="true" loading="eager" />
         <span>{headerCopy.wordmark}</span>
       </a>
-      <span class="site-header__rule" aria-hidden="true"></span>
-      <p class="site-header__descriptor">{headerCopy.descriptor}</p>
+      <span class="site-header__rule" aria-hidden="true" data-ceremony-part="identity"></span>
+      <p class="site-header__descriptor" data-ceremony-part="masthead">{headerCopy.descriptor}</p>
     </div>
 
-    <nav class="site-header__nav" aria-label={headerCopy.navAriaLabel}>
+    <nav
+      class="site-header__nav"
+      aria-label={headerCopy.navAriaLabel}
+      data-ceremony-part="masthead"
+    >
       {headerCopy.navItems.map((item) => (
         <a class:list={{ "site-header__contact": "accent" in item && item.accent }} href={item.href}>
           {item.label}
@@ -149,6 +158,47 @@ const { variant = 'paper' } = Astro.props;
 
   .site-header--overlay .site-header__descriptor {
     color: var(--color-primary);
+  }
+
+  @media
+    (scripting: enabled) and (min-width: 861px) and (hover: hover) and (pointer: fine) and
+    (prefers-reduced-motion: no-preference) {
+    :global(
+      body:has(
+          .hero:is(
+              [data-ceremony-state='pending'],
+              [data-ceremony-state='eligible'],
+              [data-ceremony-state='ready'],
+              [data-ceremony-state='running']
+            )
+        )
+        [data-ceremony-part]
+    ) {
+      clip-path: inset(0 0 0 0);
+      opacity: 1;
+      transform: translateY(0);
+      transition:
+        clip-path 160ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 120ms ease-out,
+        transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: clip-path, opacity, transform;
+    }
+
+    :global(
+      body:has(
+          .hero:is(
+              [data-ceremony-state='pending'],
+              [data-ceremony-state='eligible'],
+              [data-ceremony-state='ready'],
+              [data-ceremony-state='running']
+            )
+        )
+        [data-ceremony-part]:not([data-ceremony-revealed='true'])
+    ) {
+      clip-path: inset(0 0 100% 0);
+      opacity: 0;
+      transform: translateY(8px);
+    }
   }
 
   @media (max-width: 900px) {

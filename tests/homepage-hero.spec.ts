@@ -207,6 +207,49 @@ const expectLiveCanvas = async (page: Page, resolveCeremony = true) => {
   }
 };
 
+const installCeremonyObserver = (page: Page) =>
+  page.addInitScript(() => {
+    const state = window as typeof window & {
+      ceremonyEvents: { name: string; part?: string; time: number }[];
+    };
+    state.ceremonyEvents = [];
+    new MutationObserver((records) => {
+      for (const record of records) {
+        if (!(record.target instanceof HTMLElement)) continue;
+        if (
+          record.attributeName === 'data-ceremony-revealed' &&
+          record.target.dataset.ceremonyRevealed === 'true'
+        ) {
+          state.ceremonyEvents.push({
+            name: 'reveal',
+            part: record.target.dataset.ceremonyPart,
+            time: performance.now(),
+          });
+        }
+        if (record.attributeName === 'data-ceremony-state') {
+          state.ceremonyEvents.push({
+            name: `state:${record.target.dataset.ceremonyState}`,
+            time: performance.now(),
+          });
+        }
+        if (record.attributeName === 'data-ceremony-pointer-dye') {
+          state.ceremonyEvents.push({
+            name: `pointer:${record.target.dataset.ceremonyPointerDye}`,
+            time: performance.now(),
+          });
+        }
+      }
+    }).observe(document, {
+      attributeFilter: [
+        'data-ceremony-pointer-dye',
+        'data-ceremony-revealed',
+        'data-ceremony-state',
+      ],
+      attributes: true,
+      subtree: true,
+    });
+  });
+
 const installClearCounter = (page: Page) =>
   page.addInitScript(() => {
     const state = window as typeof window & { fluidClearCount: number };
@@ -433,13 +476,24 @@ test('keeps the poster and complete hero available without JavaScript', async ({
   expect(html).toContain('Bring us an idea');
   expect(html).toContain('/fluid-hero-poster.webp');
 
-  const context = await browser.newContext({ javaScriptEnabled: false });
+  const context = await browser.newContext({
+    javaScriptEnabled: false,
+    viewport: { width: 1440, height: 900 },
+  });
   const page = await context.newPage();
   await page.goto('/');
   const hero = getHero(page);
   await expect(hero).toBeVisible();
   await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
   await expect(hero.locator('[data-fluid-poster]')).toHaveCSS('opacity', '1');
+  expect(
+    await page.locator('[data-ceremony-part]').evaluateAll((elements) =>
+      elements.map((element) => {
+        const style = getComputedStyle(element);
+        return { clipPath: style.clipPath, opacity: style.opacity };
+      }),
+    ),
+  ).toEqual(Array.from({ length: 10 }, () => ({ clipPath: 'none', opacity: '1' })));
   await expectCurrentHeroComposition(page);
   await context.close();
 });
@@ -511,6 +565,10 @@ test('begins an eligible desktop view on warm paper with a faint field', async (
       ceremony: hero.dataset.ceremonyState,
       fluid: hero.dataset.fluidState,
       headingVisibility: getComputedStyle(heading).visibility,
+      interfaceOpacity: Array.from(
+        document.querySelectorAll<HTMLElement>('[data-ceremony-part]'),
+        (element) => Number(getComputedStyle(element).opacity),
+      ),
       posterOpacity: Number(getComputedStyle(poster).opacity),
     };
   });
@@ -521,7 +579,133 @@ test('begins an eligible desktop view on warm paper with a faint field', async (
     ceremony: 'eligible',
     fluid: 'poster',
     headingVisibility: 'visible',
+    interfaceOpacity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     posterOpacity: 0.22,
+  });
+});
+
+test('resolves the interface in order before handing off normal pointer dye', async ({ page }) => {
+  await installCeremonyObserver(page);
+  await page.setViewportSize({ width: 1024, height: 640 });
+  await page.addInitScript(() => window.sessionStorage.clear());
+  await page.goto('/');
+
+  const hero = getHero(page);
+  await expectLiveCanvas(page, false);
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'running');
+  await page.mouse.move(80, 520);
+  await page.mouse.move(300, 520, { steps: 4 });
+  await expect(hero).toHaveAttribute('data-fluid-pointer-response', 'graphite');
+  await expect(hero).not.toHaveAttribute('data-fluid-pointer-active', 'true');
+
+  await expect(hero).toHaveAttribute('data-ceremony-pointer-dye', 'available', {
+    timeout: 2_500,
+  });
+  await page.mouse.move(420, 520);
+  await expect(hero).toHaveAttribute('data-fluid-pointer-response', 'orange');
+  await expect(hero).toHaveAttribute('data-fluid-pointer-active', 'true');
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'settled', { timeout: 4_000 });
+
+  const events = await page.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          ceremonyEvents: { name: string; part?: string; time: number }[];
+        }
+      ).ceremonyEvents,
+  );
+  const runningAt = events.find(({ name }) => name === 'state:running')?.time;
+  if (runningAt === undefined) throw new Error('The ceremony start was not observed.');
+  const revealEvents = events.filter(
+    (event) => event.name === 'reveal' && event.part && event.time >= runningAt,
+  );
+  const uniqueReveals = revealEvents.filter(
+    (event, index) => revealEvents.findIndex(({ part }) => part === event.part) === index,
+  );
+  expect(uniqueReveals.map(({ part }) => part)).toEqual([
+    'identity',
+    'masthead',
+    'eyebrow',
+    'headline-first',
+    'headline-rest',
+    'period',
+    'clarification',
+    'actions',
+  ]);
+
+  const actionsAt = uniqueReveals.find(({ part }) => part === 'actions')?.time;
+  const pointerAt = events.find(
+    ({ name, time }) => name === 'pointer:available' && time >= runningAt,
+  )?.time;
+  const settledAt = events.find(
+    ({ name, time }) => name === 'state:settled' && time >= runningAt,
+  )?.time;
+  expect(actionsAt).toBeDefined();
+  expect(pointerAt).toBeDefined();
+  expect(settledAt).toBeDefined();
+  expect((actionsAt ?? 0) - runningAt).toBeGreaterThanOrEqual(1_100);
+  expect((actionsAt ?? 0) - runningAt).toBeLessThanOrEqual(1_450);
+  expect((pointerAt ?? 0) - runningAt).toBeGreaterThanOrEqual(1_500);
+  expect((pointerAt ?? 0) - runningAt).toBeLessThanOrEqual(1_900);
+  expect((settledAt ?? 0) - runningAt).toBeGreaterThanOrEqual(1_900);
+  expect((settledAt ?? 0) - runningAt).toBeLessThanOrEqual(2_700);
+  await expectCurrentHeroComposition(page);
+});
+
+test('fast-forwards for visitor intent without consuming the initiating action', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 640 });
+  const beginEligibleView = async () => {
+    await page.goto('/');
+    await page.evaluate(() => window.sessionStorage.clear());
+    await page.reload();
+    const hero = getHero(page);
+    await expectLiveCanvas(page, false);
+    await expect(hero).toHaveAttribute('data-ceremony-state', 'running');
+    return hero;
+  };
+
+  await test.step('Escape resolves immediately', async () => {
+    const hero = await beginEligibleView();
+    await page.keyboard.press('Escape');
+    await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+    await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'key-escape');
+    await expectCurrentHeroComposition(page);
+  });
+
+  await test.step('Tab keeps native focus movement', async () => {
+    const hero = await beginEligibleView();
+    await page.keyboard.press('Tab');
+    await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+    await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'key-tab');
+    await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();
+  });
+
+  await test.step('scroll keeps native page movement', async () => {
+    const hero = await beginEligibleView();
+    await page.mouse.wheel(0, 480);
+    await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  });
+
+  await test.step('control activation keeps navigation', async () => {
+    const hero = await beginEligibleView();
+    const workLink = page.getByRole('banner', { name: 'Site header' }).getByRole('link', {
+      name: 'Work',
+      exact: true,
+    });
+    await expect(page.locator('.site-header__nav')).toHaveAttribute(
+      'data-ceremony-revealed',
+      'true',
+      { timeout: 1_500 },
+    );
+    await Promise.all([page.waitForURL('**/work'), workLink.click()]);
+    expect(
+      await page.evaluate(() => window.sessionStorage.getItem('obsolete:hero-ceremony-complete')),
+    ).toBe('true');
+    expect(await page.evaluate(() => window.location.pathname)).toBe('/work');
+    await expect(hero).toHaveCount(0);
   });
 });
 
@@ -546,8 +730,7 @@ test('awakens the first eligible desktop field from the rendered period without 
     hero,
     canvas,
     heading,
-    hero.locator('.hero__lead'),
-    hero.locator('.hero__actions'),
+    hero.locator('.hero__clarification'),
     page.getByRole('banner', { name: 'Site header' }),
   ];
   await expectLiveCanvas(page, false);
@@ -567,9 +750,13 @@ test('awakens the first eligible desktop field from the rendered period without 
     ['.site-header', '.hero__eyebrow', '#hero-title', '.hero__clarification'].map((selector) => {
       const element = document.querySelector<HTMLElement>(selector);
       if (!element) return false;
-      const style = getComputedStyle(element);
       const bounds = element.getBoundingClientRect();
-      return style.visibility !== 'hidden' && Number(style.opacity) > 0 && bounds.width > 0;
+      return (
+        !element.hasAttribute('aria-hidden') &&
+        !element.hasAttribute('inert') &&
+        getComputedStyle(element).visibility !== 'hidden' &&
+        bounds.width > 0
+      );
     }),
   );
   expect(interfaceState).toEqual([true, true, true, true]);

@@ -5,8 +5,13 @@ import { displayFragment } from '../src/scripts/fluid-shaders';
 import {
   CEREMONY_DURATION_MS,
   CEREMONY_IMPULSE_MS,
+  CEREMONY_POINTER_DYE_MS,
+  CEREMONY_REVEAL_TRANSITION_MS,
+  HERO_CEREMONY_REVEALS,
   decideHeroCeremonyEligibility,
   getHeroCeremonyFrame,
+  getRevealedHeroCeremonyParts,
+  isHeroPointerDyeAvailable,
 } from '../src/scripts/hero-ceremony.ts';
 
 describe('hero ceremony eligibility', () => {
@@ -48,6 +53,46 @@ describe('hero ceremony eligibility', () => {
   }
 });
 
+describe('hero ceremony interface choreography', () => {
+  test('reveals the identity, proposition, and actions in the agreed order', () => {
+    assert.deepEqual(
+      HERO_CEREMONY_REVEALS.map(({ part }) => part),
+      [
+        'identity',
+        'masthead',
+        'eyebrow',
+        'headline-first',
+        'headline-rest',
+        'period',
+        'clarification',
+        'actions',
+      ],
+    );
+    assert.deepEqual(getRevealedHeroCeremonyParts(419), []);
+    assert.deepEqual(getRevealedHeroCeremonyParts(420), ['identity']);
+    assert.deepEqual(getRevealedHeroCeremonyParts(640), ['identity', 'masthead', 'eyebrow']);
+    assert.deepEqual(getRevealedHeroCeremonyParts(1_120), [
+      'identity',
+      'masthead',
+      'eyebrow',
+      'headline-first',
+      'headline-rest',
+      'period',
+      'clarification',
+    ]);
+    assert.deepEqual(
+      getRevealedHeroCeremonyParts(1_220),
+      HERO_CEREMONY_REVEALS.map(({ part }) => part),
+    );
+  });
+
+  test('makes the complete proposition visible by roughly 1.4 seconds', () => {
+    const actions = HERO_CEREMONY_REVEALS.find(({ part }) => part === 'actions');
+    assert.ok(actions);
+    assert.ok(actions.atMs + CEREMONY_REVEAL_TRANSITION_MS <= 1_400);
+  });
+});
+
 describe('hero ceremony field behavior', () => {
   test('keeps authored orange local to the punctuation impulse', () => {
     assert.match(displayFragment, /punctuationOrange = exp\(-dot\(impulseOffset, impulseOffset\)/u);
@@ -59,6 +104,15 @@ describe('hero ceremony field behavior', () => {
     assert.match(displayFragment, /pressureFront = mix\(0\.04, 1\.3, uCeremonyProgress\)/u);
     assert.match(displayFragment, /awakening = max\(uCeremonyProgress, pressureResponse/u);
     assert.match(displayFragment, /density = restingDensity \* mix\(0\.46, 1\.0, awakening\)/u);
+  });
+
+  test('gates normal orange pointer dye while keeping a graphite-only response', () => {
+    assert.equal(isHeroPointerDyeAvailable(CEREMONY_POINTER_DYE_MS - 1), false);
+    assert.equal(isHeroPointerDyeAvailable(CEREMONY_POINTER_DYE_MS), true);
+    assert.match(
+      displayFragment,
+      /quietPointerResponse \*= uQuietPointerStrength[\s\S]+interactiveOffset \+= quietPointerDirection \* quietPointerResponse/u,
+    );
   });
 });
 

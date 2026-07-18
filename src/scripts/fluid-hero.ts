@@ -195,12 +195,14 @@ class FluidEngine {
   private lastFrameTime = 0;
   private pendingSplats: FluidSplat[] = [];
   private pointerActive = false;
+  private pointerDyeEnabled = true;
   private pointerInitialized = false;
   private pointerPoint: [number, number] = [0.5, 0.5];
   private pointerSpeed = 0;
   private pointerTarget: [number, number] = [0.5, 0.5];
   private qualityCooldown = 0;
   private qualityIndex: number;
+  private quietPointerStrength = 0;
   private targetAspect = 1;
   private targets: FluidTargets | undefined;
   private warmupFrames = 0;
@@ -268,7 +270,7 @@ class FluidEngine {
     setUniform(this.passes.display, 'uCeremonyOrigin', point);
   }
 
-  setPointerTarget(point: [number, number], speed: number) {
+  setPointerTarget(point: [number, number], speed: number, allowDye: boolean) {
     if (!this.pointerInitialized) {
       this.pointerPoint = [...point];
       this.pointerInitialized = true;
@@ -276,7 +278,13 @@ class FluidEngine {
     this.pointerTarget = [...point];
     this.pointerSpeed = speed;
     this.pointerActive = true;
-    this.hero.dataset.fluidPointerActive = 'true';
+    this.pointerDyeEnabled = allowDye;
+    this.hero.dataset.fluidPointerResponse = allowDye ? 'orange' : 'graphite';
+    if (allowDye) {
+      this.hero.dataset.fluidPointerActive = 'true';
+    } else {
+      delete this.hero.dataset.fluidPointerActive;
+    }
     this.updatePointerDot();
   }
 
@@ -284,7 +292,10 @@ class FluidEngine {
     this.pointerActive = false;
     this.pointerInitialized = false;
     this.pointerSpeed = 0;
+    this.quietPointerStrength = 0;
+    setUniform(this.passes.display, 'uQuietPointerStrength', 0);
     delete this.hero.dataset.fluidPointerActive;
+    delete this.hero.dataset.fluidPointerResponse;
   }
 
   setSharedPaused(isPaused: boolean) {
@@ -319,6 +330,8 @@ class FluidEngine {
       uCssResolution: { value: [1, 1] },
       uDye: { value: null },
       uDyeTexelSize: { value: [1, 1] },
+      uQuietPointer: { value: [0.5, 0.5] },
+      uQuietPointerStrength: { value: 0 },
       uTime: { value: this.elapsedTime },
       uVelocity: { value: null },
     }),
@@ -459,6 +472,8 @@ class FluidEngine {
   }
 
   private advancePointer(delta: number) {
+    this.quietPointerStrength *= Math.exp(-delta * 8);
+    setUniform(this.passes.display, 'uQuietPointerStrength', this.quietPointerStrength);
     if (!this.pointerActive || !this.pointerInitialized) return;
     const previous: [number, number] = [...this.pointerPoint];
     const follow = 1 - Math.exp(-delta * 9);
@@ -474,6 +489,13 @@ class FluidEngine {
     if (distance < 0.35) return;
 
     const response = Math.min(this.pointerSpeed / MAX_POINTER_SPEED, 1);
+    if (!this.pointerDyeEnabled) {
+      this.quietPointerStrength = Math.max(this.quietPointerStrength, 0.18 + response * 0.32);
+      setUniform(this.passes.display, 'uQuietPointer', this.pointerPoint);
+      setUniform(this.passes.display, 'uQuietPointerStrength', this.quietPointerStrength);
+      return;
+    }
+
     const splatCount = Math.min(Math.max(Math.ceil(distance / 28), 1), 5);
     for (let index = 1; index <= splatCount; index += 1) {
       const progress = index / splatCount;
@@ -519,12 +541,14 @@ class FluidEngine {
         [splat.velocity[0], splat.velocity[1], 0],
         splat.radius * 1.4,
       );
-      this.inject(
-        targets.dye,
-        splat.point,
-        [splat.strength, splat.strength * 0.2, splat.strength * 0.045],
-        splat.radius,
-      );
+      if (splat.strength > 0) {
+        this.inject(
+          targets.dye,
+          splat.point,
+          [splat.strength, splat.strength * 0.2, splat.strength * 0.045],
+          splat.radius,
+        );
+      }
     }
 
     const divergence = this.passes.divergence;
@@ -700,11 +724,7 @@ export const mountFluidHero = (root: HTMLElement) => {
       }
       return;
     }
-    if (
-      (!finePointer.matches && event.pointerType !== 'pen') ||
-      reducedMotion.matches ||
-      !ceremony.allowsPointerDye()
-    ) {
+    if ((!finePointer.matches && event.pointerType !== 'pen') || reducedMotion.matches) {
       return;
     }
     if (isInteractiveTarget(event.target)) {
@@ -727,7 +747,11 @@ export const mountFluidHero = (root: HTMLElement) => {
       current.speed = lastPointer.speed * 0.58 + measuredSpeed * 0.42;
     }
 
-    engine?.setPointerTarget([x / bounds.width, 1 - y / bounds.height], current.speed);
+    engine?.setPointerTarget(
+      [x / bounds.width, 1 - y / bounds.height],
+      current.speed,
+      ceremony.allowsPointerDye(),
+    );
     lastPointer = current;
   };
 

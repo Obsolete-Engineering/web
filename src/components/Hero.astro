@@ -7,6 +7,7 @@ import { heroCopy } from '../copy';
   aria-labelledby="hero-title"
   data-fluid-hero
   data-fluid-state="poster"
+  data-ceremony-pointer-dye="gated"
   data-ceremony-state="pending"
   data-motion-section="hero"
 >
@@ -27,7 +28,11 @@ import { heroCopy } from '../copy';
   <span class="hero__pointer-dot" aria-hidden="true" data-fluid-pointer-dot></span>
 
   <div class="hero__content">
-    <div class="hero__eyebrow" data-motion="hero-eyebrow">
+    <div
+      class="hero__eyebrow"
+      data-ceremony-part="eyebrow"
+      data-motion="hero-eyebrow"
+    >
       <span aria-hidden="true"></span>
       <p>{heroCopy.eyebrow}</p>
       <span aria-hidden="true"></span>
@@ -39,6 +44,7 @@ import { heroCopy } from '../copy';
           <span
             class="hero__title-line"
             data-title-line="first"
+            data-ceremony-part="headline-first"
             data-motion="hero-title-line"
           >
             {heroCopy.title.firstLine}
@@ -46,6 +52,7 @@ import { heroCopy } from '../copy';
           <span
             class="hero__title-line hero__title-rest"
             data-title-line="rest"
+            data-ceremony-part="headline-rest"
             data-motion="hero-title-line"
           >
             <span
@@ -59,7 +66,10 @@ import { heroCopy } from '../copy';
               class="hero__title-last"
               data-title-part="last"
             >
-              {heroCopy.title.lastLine}<span class="hero__title-period">
+              {heroCopy.title.lastLine}<span
+                class="hero__title-period"
+                data-ceremony-part="period"
+              >
                 {heroCopy.title.punctuation}
               </span>
             </span>
@@ -69,9 +79,13 @@ import { heroCopy } from '../copy';
     </div>
 
     <div class="hero__clarification" data-motion="hero-clarification">
-      <p class="hero__lead">{heroCopy.lead}</p>
+      <p class="hero__lead" data-ceremony-part="clarification">{heroCopy.lead}</p>
 
-      <div class="hero__actions" aria-label={heroCopy.actionsAriaLabel}>
+      <div
+        class="hero__actions"
+        aria-label={heroCopy.actionsAriaLabel}
+        data-ceremony-part="actions"
+      >
         <a class="hero__action hero__action--primary" href={heroCopy.actions.primary.href}>
           <span>{heroCopy.actions.primary.label}</span>
           <span aria-hidden="true">{heroCopy.actions.primary.suffix}</span>

@@ -1,6 +1,29 @@
 export const CEREMONY_DURATION_MS = 2_100;
 export const CEREMONY_IMPULSE_MS = 280;
+export const CEREMONY_POINTER_DYE_MS = 1_650;
+export const CEREMONY_REVEAL_TRANSITION_MS = 160;
 export const HERO_CEREMONY_SESSION_KEY = 'obsolete:hero-ceremony-complete';
+
+export type HeroCeremonyPart =
+  | 'identity'
+  | 'masthead'
+  | 'eyebrow'
+  | 'headline-first'
+  | 'headline-rest'
+  | 'period'
+  | 'clarification'
+  | 'actions';
+
+export const HERO_CEREMONY_REVEALS = [
+  { atMs: 420, part: 'identity' },
+  { atMs: 560, part: 'masthead' },
+  { atMs: 640, part: 'eyebrow' },
+  { atMs: 720, part: 'headline-first' },
+  { atMs: 880, part: 'headline-rest' },
+  { atMs: 1_040, part: 'period' },
+  { atMs: 1_120, part: 'clarification' },
+  { atMs: 1_220, part: 'actions' },
+] as const satisfies readonly { atMs: number; part: HeroCeremonyPart }[];
 
 const CEREMONY_READINESS_TIMEOUT_MS = 800;
 const DESKTOP_QUERY = '(min-width: 861px) and (hover: hover) and (pointer: fine)';
@@ -54,6 +77,17 @@ export const decideHeroCeremonyEligibility = (
   if (!input.storageAvailable) return { eligible: false, reason: 'storage' };
   return { eligible: true, reason: 'eligible' };
 };
+
+export const getRevealedHeroCeremonyParts = (elapsedMs: number): HeroCeremonyPart[] => {
+  const revealed: HeroCeremonyPart[] = [];
+  for (const { atMs, part } of HERO_CEREMONY_REVEALS) {
+    if (elapsedMs >= atMs) revealed.push(part);
+  }
+  return revealed;
+};
+
+export const isHeroPointerDyeAvailable = (elapsedMs: number) =>
+  elapsedMs >= CEREMONY_POINTER_DYE_MS;
 
 export const getHeroCeremonyFrame = (elapsedMs: number): HeroCeremonyFrame => {
   if (elapsedMs <= CEREMONY_IMPULSE_MS) return { impulse: 0, progress: 0 };
@@ -116,8 +150,27 @@ export const createHeroCeremony = (
   let runtime: HeroCeremonyRuntime | undefined;
   let startedAt = 0;
   let impulseInjected = false;
+  let pointerDyeAvailable = !eligibility.eligible;
   let state: HeroCeremonyState = eligibility.eligible ? 'eligible' : 'skipped';
+  const ceremonyParts = new Map(
+    HERO_CEREMONY_REVEALS.map(({ part }) => [
+      part,
+      Array.from(document.querySelectorAll<HTMLElement>(`[data-ceremony-part="${part}"]`)),
+    ]),
+  );
 
+  const revealInterface = (elapsedMs: number) => {
+    for (const part of getRevealedHeroCeremonyParts(elapsedMs)) {
+      for (const element of ceremonyParts.get(part) ?? []) {
+        element.dataset.ceremonyRevealed = 'true';
+      }
+    }
+  };
+  const revealCompleteInterface = () => revealInterface(Number.POSITIVE_INFINITY);
+  const setPointerDyeAvailable = (available: boolean) => {
+    pointerDyeAvailable = available;
+    root.dataset.ceremonyPointerDye = available ? 'available' : 'gated';
+  };
   const setState = (nextState: HeroCeremonyState) => {
     state = nextState;
     root.dataset.ceremonyState = nextState;
@@ -142,6 +195,8 @@ export const createHeroCeremony = (
     runtime?.applyFrame(settledFrame);
     root.dataset.ceremonyProgress = '1';
     if (reason) root.dataset.ceremonySkipReason = reason;
+    revealCompleteInterface();
+    setPointerDyeAvailable(true);
     setState(nextState);
     rememberCompletion();
   };
@@ -151,6 +206,10 @@ export const createHeroCeremony = (
     if (state !== 'running' || !runtime) return;
     const elapsed = time - startedAt;
     currentFrame = getHeroCeremonyFrame(elapsed);
+    revealInterface(elapsed);
+    if (!pointerDyeAvailable && isHeroPointerDyeAvailable(elapsed)) {
+      setPointerDyeAvailable(true);
+    }
 
     if (!impulseInjected && elapsed >= CEREMONY_IMPULSE_MS) {
       const point = measureImpulsePoint(root);
@@ -214,6 +273,7 @@ export const createHeroCeremony = (
   };
 
   setState(state);
+  setPointerDyeAvailable(pointerDyeAvailable);
   if (eligibility.eligible) {
     readinessTimer = window.setTimeout(
       () => skip('readiness-timeout'),
@@ -254,10 +314,11 @@ export const createHeroCeremony = (
   } else {
     root.dataset.ceremonySkipReason = eligibility.reason;
     root.dataset.ceremonyProgress = '1';
+    revealCompleteInterface();
   }
 
   return {
-    allowsPointerDye: () => state === 'settled' || state === 'skipped',
+    allowsPointerDye: () => pointerDyeAvailable,
     dispose: () => {
       if (state === 'disposed') return;
       clearScheduling();

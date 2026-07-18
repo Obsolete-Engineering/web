@@ -2,7 +2,17 @@
 import { capabilitiesCopy } from '../copy';
 ---
 
-<section class="capabilities" aria-labelledby="capabilities-title" data-motion-section="capabilities">
+<section
+  class="capabilities"
+  aria-labelledby="capabilities-title"
+  data-grain-state="static"
+  data-capabilities-grain
+  data-motion-section="capabilities"
+>
+  <div class="capabilities__grain" aria-hidden="true">
+    <canvas data-grain-canvas></canvas>
+  </div>
+
   <div class="capabilities__inner">
     <header class="capabilities__header">
       <div class="capabilities__rail">
@@ -46,16 +56,58 @@ import { capabilitiesCopy } from '../copy';
   </div>
 </section>
 
+<script>
+  import { mountCapabilitiesGrain } from '../scripts/capabilities-grain';
+
+  const root = document.querySelector<HTMLElement>('[data-capabilities-grain]');
+  const dispose = root ? mountCapabilitiesGrain(root) : () => {};
+
+  window.addEventListener('pagehide', (event) => {
+    if (!event.persisted) dispose();
+  });
+</script>
+
 <style>
   .capabilities {
     background: var(--color-surface-inverse);
     color: var(--color-on-primary);
+    isolation: isolate;
+    overflow: clip;
     padding: clamp(72px, 8.5vw, 120px) clamp(20px, 3.34vw, 48px);
+    position: relative;
+  }
+
+  .capabilities__grain {
+    background-color: var(--color-surface-inverse);
+    background-image: url('/capabilities-grain.png');
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    z-index: 0;
+  }
+
+  .capabilities__grain canvas {
+    display: block;
+    height: 100%;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+  }
+
+  .capabilities[data-grain-state='live'] .capabilities__grain canvas,
+  .capabilities[data-grain-state='paused'] .capabilities__grain canvas {
+    opacity: 1;
   }
 
   .capabilities__inner {
     margin-inline: auto;
     max-width: 1344px;
+    position: relative;
+    z-index: 1;
   }
 
   .capabilities__header {

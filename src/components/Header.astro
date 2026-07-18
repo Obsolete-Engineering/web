@@ -164,7 +164,6 @@ const { variant = 'paper' } = Astro.props;
     :global(
       body:has(
           .hero:is(
-              [data-ceremony-state='pending'],
               [data-ceremony-state='eligible'],
               [data-ceremony-state='ready'],
               [data-ceremony-state='running']
@@ -185,7 +184,6 @@ const { variant = 'paper' } = Astro.props;
     :global(
       body:has(
           .hero:is(
-              [data-ceremony-state='pending'],
               [data-ceremony-state='eligible'],
               [data-ceremony-state='ready'],
               [data-ceremony-state='running']
@@ -196,6 +194,10 @@ const { variant = 'paper' } = Astro.props;
       clip-path: inset(0 0 100% 0);
       opacity: 0;
       transform: translateY(8px);
+    }
+
+    :global(body:has(.hero[data-ceremony-state='ready']) [data-ceremony-part]) {
+      transition: none;
     }
 
     :global(

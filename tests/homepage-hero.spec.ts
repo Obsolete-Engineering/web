@@ -78,6 +78,52 @@ const expectCurrentHeroComposition = async (page: Page) => {
   await expect(secondaryAction).toHaveAttribute('href', '/work');
 };
 
+const expectResolvedHero = async (page: Page) => {
+  await expectCurrentHeroComposition(page);
+  await expect
+    .poll(() =>
+      page.locator('[data-ceremony-part]').evaluateAll((elements) =>
+        elements.every((element) => {
+          const style = getComputedStyle(element);
+          return style.opacity === '1' && style.visibility === 'visible';
+        }),
+      ),
+    )
+    .toBe(true);
+  expect(
+    await page.evaluate(() => ({
+      ariaHidden: document.querySelectorAll('[data-ceremony-part][aria-hidden="true"]').length,
+      disabled: document.querySelectorAll(
+        '[data-ceremony-part][aria-disabled="true"], [data-ceremony-part][disabled]',
+      ).length,
+      inert: document.querySelectorAll('[data-ceremony-part][inert]').length,
+      tabIndex: document.querySelectorAll('[data-ceremony-part][tabindex]').length,
+    })),
+  ).toEqual({ ariaHidden: 1, disabled: 0, inert: 0, tabIndex: 0 });
+};
+
+const installCeremonyVisibilityTrace = (page: Page) =>
+  page.addInitScript(() => {
+    const samples: { opacity: number[]; state: string | undefined }[] = [];
+    const sample = () => {
+      const hero = document.querySelector<HTMLElement>('[data-fluid-hero]');
+      const parts = Array.from(document.querySelectorAll<HTMLElement>('[data-ceremony-part]'));
+      if (!hero || parts.length !== 10) return;
+      samples.push({
+        opacity: parts.map((part) => Number(getComputedStyle(part).opacity)),
+        state: hero.dataset.ceremonyState,
+      });
+    };
+    new MutationObserver(sample).observe(document, {
+      attributeFilter: ['data-ceremony-state'],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    window.addEventListener('DOMContentLoaded', sample, { once: true });
+    Object.assign(window, { ceremonyVisibilitySamples: samples });
+  });
+
 const compareScreenshots = (page: Page, first: Uint8Array, second: Uint8Array) =>
   page.evaluate(
     async ([firstEncoded, secondEncoded]) => {
@@ -539,6 +585,27 @@ test('keeps the poster and complete hero available without JavaScript', async ({
   await context.close();
 });
 
+test('keeps the mobile no-JavaScript fallback complete and actionable', async ({ browser }) => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    isMobile: true,
+    javaScriptEnabled: false,
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  await page.goto('/');
+
+  const hero = getHero(page);
+  await expect(hero.locator('[data-fluid-poster]')).toHaveCSS('opacity', '1');
+  await expect(hero.locator('.hero__backdrop')).toHaveAttribute('aria-hidden', 'true');
+  await expectResolvedHero(page);
+  await Promise.all([
+    page.waitForURL('**/work'),
+    hero.getByRole('link', { name: 'See our work' }).click(),
+  ]);
+  await context.close();
+});
+
 test('uses a static, non-interactive symbol field for reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
@@ -576,9 +643,247 @@ test('falls back without errors when WebGL is unavailable', async ({ page }) => 
   const hero = getHero(page);
   await expect(hero).toHaveAttribute('data-fluid-state', 'fallback');
   await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
-  await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'fallback');
+  await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'unsupported-webgl');
   await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
   await expectCurrentHeroComposition(page);
+  expect(errors).toEqual([]);
+});
+
+const failOpenPaths = [
+  'repeat-session',
+  'hash',
+  'reduced-motion',
+  'storage',
+  'unsupported-webgl',
+] as const;
+
+for (const viewport of [
+  { name: 'desktop', width: 1024, height: 768 },
+  { name: 'mobile', width: 390, height: 844 },
+] as const) {
+  for (const path of failOpenPaths) {
+    test(`shows the ${path} ${viewport.name} view resolved from first paint`, async ({
+      browser,
+    }) => {
+      const context = await browser.newContext({
+        reducedMotion: path === 'reduced-motion' ? 'reduce' : 'no-preference',
+        viewport,
+      });
+      const staticPage = await context.newPage();
+      if (path === 'repeat-session') {
+        await staticPage.addInitScript(() =>
+          window.sessionStorage.setItem('obsolete:hero-ceremony-complete', 'true'),
+        );
+      }
+      if (path === 'storage') {
+        await staticPage.addInitScript(() => {
+          Object.defineProperty(window, 'sessionStorage', {
+            configurable: true,
+            get: () => {
+              throw new Error('Session storage is unavailable.');
+            },
+          });
+        });
+      }
+      if (path === 'unsupported-webgl') {
+        await staticPage.addInitScript(() => {
+          const getContext = HTMLCanvasElement.prototype.getContext;
+          Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+            configurable: true,
+            value(this: HTMLCanvasElement, type: string, ...attributes: unknown[]) {
+              if (type.startsWith('webgl')) return null;
+              return Reflect.apply(getContext, this, [type, ...attributes]);
+            },
+          });
+        });
+      }
+      await installCeremonyVisibilityTrace(staticPage);
+      await staticPage.goto(path === 'hash' ? '/#featured-work' : '/');
+
+      const hero = getHero(staticPage);
+      await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+      await expect(hero).toHaveAttribute('data-ceremony-skip-reason', path);
+      await expectResolvedHero(staticPage);
+      const samples = await staticPage.evaluate(
+        () =>
+          (
+            window as typeof window & {
+              ceremonyVisibilitySamples: { opacity: number[]; state?: string }[];
+            }
+          ).ceremonyVisibilitySamples,
+      );
+      expect(samples.length).toBeGreaterThan(0);
+      expect(samples.every(({ opacity }) => opacity.every((value) => value === 1))).toBe(true);
+      expect(
+        samples.every(({ state }) =>
+          state ? !['eligible', 'ready', 'running'].includes(state) : true,
+        ),
+      ).toBe(true);
+      await context.close();
+    });
+  }
+}
+
+test('does not initialize WebGL or pointer responses for reduced motion', async ({ browser }) => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'reduce',
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  await page.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    Object.assign(window, { heroWebGlContextRequests: 0 });
+    Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+      configurable: true,
+      value(this: HTMLCanvasElement, type: string, ...attributes: unknown[]) {
+        if (type.startsWith('webgl')) {
+          (
+            window as typeof window & { heroWebGlContextRequests: number }
+          ).heroWebGlContextRequests += 1;
+        }
+        return Reflect.apply(getContext, this, [type, ...attributes]);
+      },
+    });
+  });
+  await page.goto('/');
+
+  const hero = getHero(page);
+  await expect(hero).toHaveAttribute('data-fluid-state', 'static');
+  await expect(hero.locator('[data-fluid-pointer-dot]')).toBeHidden();
+  await hero.dispatchEvent('pointerdown', {
+    clientX: 120,
+    clientY: 320,
+    pointerId: 1,
+    pointerType: 'touch',
+  });
+  await expect(hero).not.toHaveAttribute('data-fluid-pointer-response', /.+/u);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { heroWebGlContextRequests: number }).heroWebGlContextRequests,
+    ),
+  ).toBe(0);
+  await context.close();
+});
+
+test('fails open when fluid initialization or a live context fails', async ({ browser }) => {
+  const initializationContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const initializationPage = await initializationContext.newPage();
+  const initializationErrors: string[] = [];
+  initializationPage.on('pageerror', (error) => initializationErrors.push(error.message));
+  await initializationPage.addInitScript(() => {
+    const checkFramebufferStatus = WebGL2RenderingContext.prototype.checkFramebufferStatus;
+    let framebufferChecks = 0;
+    Object.defineProperty(WebGL2RenderingContext.prototype, 'checkFramebufferStatus', {
+      configurable: true,
+      value(this: WebGL2RenderingContext, target: GLenum) {
+        if (target === this.FRAMEBUFFER) {
+          framebufferChecks += 1;
+          if (framebufferChecks > 1) return this.FRAMEBUFFER_UNSUPPORTED;
+        }
+        return Reflect.apply(checkFramebufferStatus, this, [target]);
+      },
+    });
+  });
+  await installCeremonyVisibilityTrace(initializationPage);
+  await initializationPage.goto('/');
+  const initializationHero = getHero(initializationPage);
+  await expect(initializationHero).toHaveAttribute('data-ceremony-preflight', 'eligible');
+  await expect(initializationHero).toHaveAttribute('data-fluid-state', 'fallback');
+  await expect(initializationHero).toHaveAttribute('data-ceremony-state', 'skipped');
+  await expect(initializationHero).toHaveAttribute('data-ceremony-skip-reason', 'fallback');
+  await expectResolvedHero(initializationPage);
+  const initializationSamples = await initializationPage.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          ceremonyVisibilitySamples: { opacity: number[]; state?: string }[];
+        }
+      ).ceremonyVisibilitySamples,
+  );
+  expect(initializationSamples.length).toBeGreaterThan(0);
+  expect(initializationSamples.every(({ opacity }) => opacity.every((value) => value === 1))).toBe(
+    true,
+  );
+  expect(initializationErrors).toEqual([]);
+  await initializationContext.close();
+
+  const context = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+  const page = await context.newPage();
+  await page.goto('/');
+  const hero = getHero(page);
+  await expectLiveCanvas(page, false);
+  await hero.locator('[data-fluid-canvas]').dispatchEvent('webglcontextlost');
+  await expect(hero).toHaveAttribute('data-fluid-state', 'fallback');
+  await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+  await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
+  await expectResolvedHero(page);
+  await context.close();
+});
+
+test('fails open if a live fluid render throws', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.addInitScript(() => {
+    const drawArrays = WebGL2RenderingContext.prototype.drawArrays;
+    Object.assign(window, { failFluidDraw: false });
+    Object.defineProperty(WebGL2RenderingContext.prototype, 'drawArrays', {
+      configurable: true,
+      value(this: WebGL2RenderingContext, ...arguments_: unknown[]) {
+        const shouldFail =
+          (window as typeof window & { failFluidDraw: boolean }).failFluidDraw &&
+          this.canvas instanceof HTMLCanvasElement &&
+          this.canvas.matches('[data-fluid-canvas]');
+        if (shouldFail) throw new Error('Forced fluid render failure.');
+        return Reflect.apply(drawArrays, this, arguments_);
+      },
+    });
+  });
+  await page.goto('/');
+  await expectLiveCanvas(page);
+  await page.evaluate(() => {
+    (window as typeof window & { failFluidDraw: boolean }).failFluidDraw = true;
+  });
+
+  const hero = getHero(page);
+  await expect(hero).toHaveAttribute('data-fluid-state', 'fallback');
+  await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
+  await expectResolvedHero(page);
+  expect(errors).toEqual([]);
+});
+
+test('fails open if fluid render targets fail during a resize', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.addInitScript(() => {
+    const checkFramebufferStatus = WebGL2RenderingContext.prototype.checkFramebufferStatus;
+    Object.assign(window, { failFluidResize: false });
+    Object.defineProperty(WebGL2RenderingContext.prototype, 'checkFramebufferStatus', {
+      configurable: true,
+      value(this: WebGL2RenderingContext, target: GLenum) {
+        const shouldFail =
+          (window as typeof window & { failFluidResize: boolean }).failFluidResize &&
+          this.canvas instanceof HTMLCanvasElement &&
+          this.canvas.matches('[data-fluid-canvas]');
+        if (shouldFail && target === this.FRAMEBUFFER) return this.FRAMEBUFFER_UNSUPPORTED;
+        return Reflect.apply(checkFramebufferStatus, this, [target]);
+      },
+    });
+  });
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto('/');
+  await expectLiveCanvas(page);
+  await page.evaluate(() => {
+    (window as typeof window & { failFluidResize: boolean }).failFluidResize = true;
+  });
+  await page.setViewportSize({ width: 600, height: 900 });
+
+  const hero = getHero(page);
+  await expect(hero).toHaveAttribute('data-fluid-state', 'fallback');
+  await expect(hero.locator('[data-fluid-poster]')).toBeVisible();
+  await expectResolvedHero(page);
   expect(errors).toEqual([]);
 });
 
@@ -617,7 +922,7 @@ test('begins an eligible desktop view on warm paper with a faint field', async (
   test.skip(initial.ceremony === 'skipped', 'WebGL is unavailable');
   expect(initial).toEqual({
     actionTarget: '/contact#project-inquiry',
-    ceremony: 'eligible',
+    ceremony: 'ready',
     fluid: 'poster',
     headingVisibility: 'visible',
     interfaceOpacity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -697,10 +1002,11 @@ test('fast-forwards for visitor intent without consuming the initiating action',
   page,
 }) => {
   await page.setViewportSize({ width: 1024, height: 640 });
+  await page.addInitScript(() => {
+    if (window.location.pathname === '/') window.sessionStorage.clear();
+  });
   const beginEligibleView = async () => {
     await page.goto('/');
-    await page.evaluate(() => window.sessionStorage.clear());
-    await page.reload();
     const hero = getHero(page);
     await expectLiveCanvas(page, false);
     await expect(hero).toHaveAttribute('data-ceremony-state', 'running');
@@ -749,6 +1055,117 @@ test('fast-forwards for visitor intent without consuming the initiating action',
     await expect(hero).toHaveCount(0);
   });
 });
+
+for (const viewport of [
+  { name: 'desktop', width: 1024, height: 768 },
+  { name: 'mobile', width: 390, height: 844 },
+] as const) {
+  test(`keeps ${viewport.name} deep-link, history, and repeat views resolved`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto('/#featured-work');
+    let hero = getHero(page);
+    await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+    await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'hash');
+    await expectResolvedHero(page);
+    expect(
+      await page.evaluate(() => window.sessionStorage.getItem('obsolete:hero-ceremony-complete')),
+    ).toBe('true');
+
+    await page.goto('/work');
+    await page.goBack();
+    hero = getHero(page);
+    await expect(hero).not.toHaveAttribute('data-ceremony-state', /eligible|ready|running/u);
+    await expectResolvedHero(page);
+
+    await page.goto('/work');
+    await page.goto('/');
+    hero = getHero(page);
+    await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+    await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'repeat-session');
+    await expectResolvedHero(page);
+  });
+
+  test(`resolves ${viewport.name} focus and environmental interruptions`, async ({ page }) => {
+    await page.addInitScript(() => window.sessionStorage.clear());
+    const beginEligibleView = async () => {
+      await page.setViewportSize(viewport);
+      await page.goto('/');
+      const hero = getHero(page);
+      await expectLiveCanvas(page, false);
+      await expect(hero).toHaveAttribute('data-ceremony-state', 'running');
+      return hero;
+    };
+
+    await test.step('programmatic focus resolves before focus styling is read', async () => {
+      const hero = await beginEligibleView();
+      const result = await hero.evaluate((root) => {
+        const action = root.querySelector<HTMLAnchorElement>('.hero__action--primary');
+        if (!action) throw new Error('The primary hero action is unavailable.');
+        action.focus();
+        return {
+          active: document.activeElement === action,
+          ariaHiddenParts: root.querySelectorAll('[data-ceremony-part][aria-hidden="true"]').length,
+          disabledActions: root.querySelectorAll(
+            '[data-ceremony-part][inert], [aria-disabled="true"]',
+          ).length,
+          opacity: getComputedStyle(action).opacity,
+          state: root.dataset.ceremonyState,
+        };
+      });
+      expect(result).toEqual({
+        active: true,
+        ariaHiddenParts: 0,
+        disabledActions: 0,
+        opacity: '1',
+        state: 'skipped',
+      });
+    });
+
+    await test.step('page hiding resolves a bfcache candidate', async () => {
+      const hero = await beginEligibleView();
+      await page.evaluate(() =>
+        window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })),
+      );
+      await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+      await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'pagehide');
+      await expectResolvedHero(page);
+    });
+
+    await test.step('document hiding resolves immediately', async () => {
+      const hero = await beginEligibleView();
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          get: () => 'hidden',
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'visibility');
+      await expectResolvedHero(page);
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          get: () => 'visible',
+        });
+      });
+    });
+
+    await test.step('resize resolves immediately', async () => {
+      const hero = await beginEligibleView();
+      await page.setViewportSize({ width: viewport.width - 20, height: viewport.height - 20 });
+      await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'resize');
+      await expectResolvedHero(page);
+    });
+
+    await test.step('orientation change resolves immediately', async () => {
+      const hero = await beginEligibleView();
+      await page.evaluate(() => window.dispatchEvent(new Event('orientationchange')));
+      await expect(hero).toHaveAttribute('data-ceremony-state', 'skipped');
+      await expect(hero).toHaveAttribute('data-ceremony-skip-reason', 'orientation');
+      await expectResolvedHero(page);
+    });
+  });
+}
 
 test('awakens the first eligible desktop field from the rendered period without a reset', async ({
   page,

@@ -23,6 +23,7 @@ describe('hero ceremony eligibility', () => {
         hasHash: false,
         reducedMotion: false,
         storageAvailable: true,
+        webGlSupported: true,
       }),
       { eligible: true, reason: 'eligible' },
     );
@@ -33,6 +34,7 @@ describe('hero ceremony eligibility', () => {
     ['hash', { hasHash: true }],
     ['reduced-motion', { reducedMotion: true }],
     ['storage', { storageAvailable: false }],
+    ['unsupported-webgl', { webGlSupported: false }],
   ] as const;
 
   for (const [reason, override] of ineligibleCases) {
@@ -43,6 +45,7 @@ describe('hero ceremony eligibility', () => {
           hasHash: false,
           reducedMotion: false,
           storageAvailable: true,
+          webGlSupported: true,
           ...override,
         }),
         { eligible: false, reason },

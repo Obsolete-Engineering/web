@@ -176,6 +176,7 @@ class FluidEngine {
   private readonly geometry: Triangle;
   private readonly gl: OGLRenderingContext;
   private readonly hero: HTMLElement;
+  private readonly onFailure: () => void;
   private readonly onReady: () => void;
   private readonly passes: Record<string, Pass>;
   private readonly pointerDot: HTMLElement;
@@ -189,6 +190,7 @@ class FluidEngine {
   private frame: number | undefined;
   private frameCount = 0;
   private frameTimeTotal = 0;
+  private initialized = false;
   private isDocumentVisible = document.visibilityState === 'visible';
   private isHeroVisible = true;
   private isSharedPaused = false;
@@ -212,11 +214,13 @@ class FluidEngine {
     canvas: HTMLCanvasElement,
     initialCeremonyFrame: HeroCeremonyFrame,
     onReady: () => void,
+    onFailure: () => void,
   ) {
     const pointerDot = hero.querySelector<HTMLElement>('[data-fluid-pointer-dot]');
     if (!pointerDot) throw new Error('The fluid pointer dot is unavailable.');
     this.hero = hero;
     this.pointerDot = pointerDot;
+    this.onFailure = onFailure;
     this.onReady = onReady;
     this.qualityIndex = window.matchMedia(MOBILE_QUERY).matches ? 1 : 0;
     this.renderer = new Renderer({
@@ -242,6 +246,7 @@ class FluidEngine {
     this.rebuildTargets();
     this.resizeObserver.observe(this.hero);
     this.hero.dataset.fluidQuality = QUALITY_TIERS[this.qualityIndex].name;
+    this.initialized = true;
     this.startLoop();
   }
 
@@ -442,15 +447,20 @@ class FluidEngine {
 
   private readonly handleResize = () => {
     if (this.disposed) return;
-    const width = Math.max(this.hero.clientWidth, 1);
-    const height = Math.max(this.hero.clientHeight, 1);
-    const aspect = Math.min(Math.max(width / height, 0.7), 2.2);
-    if (this.targets && Math.abs(aspect - this.targetAspect) > 0.04) {
-      this.rebuildTargets();
-      return;
+    try {
+      const width = Math.max(this.hero.clientWidth, 1);
+      const height = Math.max(this.hero.clientHeight, 1);
+      const aspect = Math.min(Math.max(width / height, 0.7), 2.2);
+      if (this.targets && Math.abs(aspect - this.targetAspect) > 0.04) {
+        this.rebuildTargets();
+        return;
+      }
+      this.renderer.setSize(width, height);
+      setUniform(this.passes.display, 'uCssResolution', [width, height]);
+    } catch (error) {
+      if (!this.initialized) throw error;
+      this.onFailure();
     }
-    this.renderer.setSize(width, height);
-    setUniform(this.passes.display, 'uCssResolution', [width, height]);
   };
 
   private renderPass(pass: Pass, target?: RenderTarget) {
@@ -616,13 +626,17 @@ class FluidEngine {
     const dissipationDelta = Math.min(Math.max(frameDuration / 1000, 0), 0.1);
     const simulationDelta = Math.min(dissipationDelta, MAX_DELTA_SECONDS);
     this.lastFrameTime = time;
-    this.step(simulationDelta, dissipationDelta);
-    if (this.ceremonySettled) this.adaptQuality(frameDuration);
-    if (this.warmupFrames < 3) {
-      this.warmupFrames += 1;
-      if (this.warmupFrames === 3) this.onReady();
+    try {
+      this.step(simulationDelta, dissipationDelta);
+      if (this.ceremonySettled) this.adaptQuality(frameDuration);
+      if (this.warmupFrames < 3) {
+        this.warmupFrames += 1;
+        if (this.warmupFrames === 3) this.onReady();
+      }
+      this.frame = requestAnimationFrame(this.tick);
+    } catch {
+      this.onFailure();
     }
-    this.frame = requestAnimationFrame(this.tick);
   };
 
   private startLoop() {
@@ -679,19 +693,28 @@ export const mountFluidHero = (root: HTMLElement) => {
 
     let candidate: FluidEngine | undefined;
     try {
-      candidate = new FluidEngine(root, canvas, ceremony.initialFrame, () => {
-        if (disposed || reducedMotion.matches || !candidate) return;
-        ceremony.ready({
-          applyFrame: (frame) => candidate?.setCeremonyFrame(frame),
-          injectImpulse: (point) => {
-            candidate?.setCeremonyOrigin(point);
-            candidate?.injectSplat({ ...ceremonyImpulse, point });
-          },
-        });
-        root.dataset.fluidState = 'live';
-      });
+      candidate = new FluidEngine(
+        root,
+        canvas,
+        ceremony.initialFrame,
+        () => {
+          if (disposed || reducedMotion.matches || engine !== candidate) return;
+          root.dataset.fluidState = 'live';
+        },
+        () => {
+          if (disposed || engine !== candidate) return;
+          stop('fallback');
+        },
+      );
       candidate.initialize();
       engine = candidate;
+      ceremony.ready({
+        applyFrame: (frame) => candidate?.setCeremonyFrame(frame),
+        injectImpulse: (point) => {
+          candidate?.setCeremonyOrigin(point);
+          candidate?.injectSplat({ ...ceremonyImpulse, point });
+        },
+      });
     } catch {
       candidate?.dispose();
       showFallback('fallback');

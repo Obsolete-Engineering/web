@@ -1,5 +1,6 @@
 ---
 import { heroCopy } from '../copy';
+import { HERO_CEREMONY_SESSION_KEY } from '../scripts/hero-ceremony';
 ---
 
 <section
@@ -8,6 +9,7 @@ import { heroCopy } from '../copy';
   data-fluid-hero
   data-fluid-state="poster"
   data-ceremony-pointer-dye="gated"
+  data-ceremony-session-key={HERO_CEREMONY_SESSION_KEY}
   data-ceremony-state="pending"
   data-motion-section="hero"
 >
@@ -24,6 +26,111 @@ import { heroCopy } from '../copy';
     />
     <canvas class="hero__canvas" data-fluid-canvas></canvas>
   </div>
+
+  <script is:inline>
+    (() => {
+      const root = document.currentScript?.closest('[data-fluid-hero]');
+      const canvas = root?.querySelector('[data-fluid-canvas]');
+      if (!(root instanceof HTMLElement) || !(canvas instanceof HTMLCanvasElement)) return;
+
+      // This parser-blocking probe intentionally mirrors the engine's render-target checks.
+      // Keeping it here prevents a deferred client bundle from withholding the fallback UI.
+      const supportsFluidRendering = () => {
+        const attributes = {
+          alpha: false,
+          antialias: false,
+          depth: false,
+          powerPreference: 'high-performance',
+          premultipliedAlpha: false,
+          preserveDrawingBuffer: false,
+          stencil: false,
+        };
+        const context =
+          canvas.getContext('webgl2', attributes) ?? canvas.getContext('webgl', attributes);
+        if (!context) return false;
+
+        const isWebGl2 =
+          typeof WebGL2RenderingContext !== 'undefined' &&
+          context instanceof WebGL2RenderingContext;
+        const halfFloat = isWebGl2 ? null : context.getExtension('OES_texture_half_float');
+        if (isWebGl2 && !context.getExtension('EXT_color_buffer_float')) return false;
+        if (
+          !isWebGl2 &&
+          (!halfFloat || !context.getExtension('EXT_color_buffer_half_float'))
+        ) {
+          return false;
+        }
+
+        const texture = context.createTexture();
+        const framebuffer = context.createFramebuffer();
+        if (!texture || !framebuffer) return false;
+        try {
+          context.bindTexture(context.TEXTURE_2D, texture);
+          context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MIN_FILTER, context.NEAREST);
+          context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MAG_FILTER, context.NEAREST);
+          context.texImage2D(
+            context.TEXTURE_2D,
+            0,
+            isWebGl2 ? context.RGBA16F : context.RGBA,
+            1,
+            1,
+            0,
+            context.RGBA,
+            isWebGl2 ? context.HALF_FLOAT : halfFloat.HALF_FLOAT_OES,
+            null,
+          );
+          context.bindFramebuffer(context.FRAMEBUFFER, framebuffer);
+          context.framebufferTexture2D(
+            context.FRAMEBUFFER,
+            context.COLOR_ATTACHMENT0,
+            context.TEXTURE_2D,
+            texture,
+            0,
+          );
+          return context.checkFramebufferStatus(context.FRAMEBUFFER) === context.FRAMEBUFFER_COMPLETE;
+        } catch {
+          return false;
+        } finally {
+          context.bindFramebuffer(context.FRAMEBUFFER, null);
+          context.bindTexture(context.TEXTURE_2D, null);
+          context.deleteFramebuffer(framebuffer);
+          context.deleteTexture(texture);
+        }
+      };
+
+      const sessionKey = root.dataset.ceremonySessionKey;
+      let sessionAvailable = Boolean(sessionKey);
+      let hasCompleted = false;
+      if (sessionKey) {
+        try {
+          const probeKey = `${sessionKey}:probe`;
+          window.sessionStorage.setItem(probeKey, '1');
+          window.sessionStorage.removeItem(probeKey);
+          hasCompleted = window.sessionStorage.getItem(sessionKey) === 'true';
+        } catch {
+          sessionAvailable = false;
+        }
+      }
+
+      let skipReason;
+      if (hasCompleted) skipReason = 'repeat-session';
+      else if (window.location.hash.length > 1) skipReason = 'hash';
+      else if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        skipReason = 'reduced-motion';
+      } else if (sessionAvailable === false) skipReason = 'storage';
+      else if (!supportsFluidRendering()) skipReason = 'unsupported-webgl';
+
+      if (skipReason) {
+        root.dataset.ceremonyPreflight = 'skipped';
+        root.dataset.ceremonyProgress = '1';
+        root.dataset.ceremonySkipReason = skipReason;
+        root.dataset.ceremonyState = 'skipped';
+        if (skipReason === 'unsupported-webgl') root.dataset.fluidState = 'fallback';
+      } else {
+        root.dataset.ceremonyPreflight = 'eligible';
+      }
+    })();
+  </script>
 
   <span class="hero__pointer-dot" aria-hidden="true" data-fluid-pointer-dot></span>
 
@@ -152,8 +259,8 @@ import { heroCopy } from '../copy';
   }
 
   @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
-    .hero[data-ceremony-state='pending'] .hero__poster,
-    .hero[data-ceremony-state='eligible'] .hero__poster {
+    .hero[data-ceremony-state='eligible'] .hero__poster,
+    .hero[data-ceremony-state='ready'] .hero__poster {
       opacity: 0.22;
     }
 

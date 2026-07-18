@@ -83,13 +83,14 @@ type HeroCeremonyEligibilityInput = {
   hasHash: boolean;
   reducedMotion: boolean;
   storageAvailable: boolean;
+  webGlSupported: boolean;
 };
 
 type HeroCeremonyEligibility =
   | { eligible: true; reason: 'eligible' }
   | {
       eligible: false;
-      reason: 'hash' | 'reduced-motion' | 'repeat-session' | 'storage';
+      reason: 'hash' | 'reduced-motion' | 'repeat-session' | 'storage' | 'unsupported-webgl';
     };
 
 type HeroCeremonyRuntime = {
@@ -118,6 +119,7 @@ export const decideHeroCeremonyEligibility = (
   if (input.hasHash) return { eligible: false, reason: 'hash' };
   if (input.reducedMotion) return { eligible: false, reason: 'reduced-motion' };
   if (!input.storageAvailable) return { eligible: false, reason: 'storage' };
+  if (!input.webGlSupported) return { eligible: false, reason: 'unsupported-webgl' };
   return { eligible: true, reason: 'eligible' };
 };
 
@@ -217,12 +219,22 @@ export const createHeroCeremony = (
     ? 'desktop'
     : 'mobile';
   const profile = HERO_CEREMONY_PROFILES[variant];
-  const eligibility = decideHeroCeremonyEligibility({
-    hasCompleted: session.completed,
-    hasHash: window.location.hash.length > 1,
-    reducedMotion: reducedMotion.matches,
-    storageAvailable: session.available,
-  });
+  const parserSkipReason = root.dataset.ceremonySkipReason;
+  const eligibility =
+    root.dataset.ceremonyPreflight === 'skipped' &&
+    (parserSkipReason === 'hash' ||
+      parserSkipReason === 'reduced-motion' ||
+      parserSkipReason === 'repeat-session' ||
+      parserSkipReason === 'storage' ||
+      parserSkipReason === 'unsupported-webgl')
+      ? ({ eligible: false, reason: parserSkipReason } as const)
+      : decideHeroCeremonyEligibility({
+          hasCompleted: session.completed,
+          hasHash: window.location.hash.length > 1,
+          reducedMotion: reducedMotion.matches,
+          storageAvailable: session.available,
+          webGlSupported: true,
+        });
   const controller = new AbortController();
   const settledFrame = getHeroCeremonyFrame(profile.durationMs, variant);
   let currentFrame = eligibility.eligible ? getHeroCeremonyFrame(0, variant) : settledFrame;
@@ -352,9 +364,11 @@ export const createHeroCeremony = (
   const handleVisibility = () => {
     if (document.visibilityState === 'hidden') skip('visibility');
   };
+  const handlePageHide = () => skip('pagehide');
+  const handleOrientationChange = () => skip('orientation');
 
   root.dataset.ceremonyVariant = variant;
-  setState(state);
+  if (!eligibility.eligible) setState(state);
   setPointerDyeAvailable(pointerDyeAvailable);
   if (eligibility.eligible) {
     readinessTimer = window.setTimeout(
@@ -393,10 +407,15 @@ export const createHeroCeremony = (
       signal: controller.signal,
     });
     window.addEventListener('resize', () => skip('resize'), { signal: controller.signal });
+    window.addEventListener('orientationchange', handleOrientationChange, {
+      signal: controller.signal,
+    });
+    window.addEventListener('pagehide', handlePageHide, { signal: controller.signal });
   } else {
     root.dataset.ceremonySkipReason = eligibility.reason;
     root.dataset.ceremonyProgress = '1';
     revealCompleteInterface();
+    rememberCompletion();
   }
 
   return {

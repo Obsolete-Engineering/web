@@ -378,11 +378,11 @@ export const craftAppliedCaseStudyCopy = {
 } as const;
 
 export const aiProductDeliveryCopy = {
-  eyebrow: 'AI product delivery',
+  eyebrow: 'Specialist engagement / AI product delivery',
   audience: 'For creative product teams',
   title: 'AI should earn its place.',
   introduction:
-    'We find where AI can make a product meaningfully more useful, then design, engineer, launch, and improve it for real-world use.',
+    'We start with a specific user outcome: helping someone find the right information, make a complex decision, or create something useful. Then we establish AI fit and design, engineer, launch, and improve the AI-enabled product for real-world use.',
   principle:
     'Sometimes the most useful answer is not to use AI. We test that before asking anyone to invest in it.',
   outcomesLabel: 'AI product outcomes',
@@ -414,8 +414,8 @@ export const aiProductDeliveryCopy = {
   ],
   outcomeAction: 'Through the judgment loop',
   process: {
-    eyebrow: 'The judgment loop',
-    title: 'From useful idea to dependable product.',
+    eyebrow: 'AI product judgment loop',
+    title: 'From useful idea to production-ready AI product.',
     steps: [
       {
         index: '01',
@@ -452,7 +452,7 @@ export const capabilitiesCopy = {
   eyebrow: 'What we make',
   title: 'From first thought to finished thing.',
   introduction:
-    'We join creative direction, design, and engineering in one continuous process, so the idea stays intact all the way to launch.',
+    'Creative direction, design, and engineering stay connected from the first decision through launch, so every choice strengthens the same idea instead of pulling it apart.',
   navigationAriaLabel: 'Capability sections',
   capabilities: [
     {

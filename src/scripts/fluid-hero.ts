@@ -1,12 +1,4 @@
-import {
-  Mesh,
-  Program,
-  Renderer,
-  RenderTarget,
-  Texture,
-  Triangle,
-  type OGLRenderingContext,
-} from 'ogl';
+import { Mesh, Program, Renderer, RenderTarget, Triangle, type OGLRenderingContext } from 'ogl';
 
 import {
   advectionFragment,
@@ -47,6 +39,7 @@ type Pass = {
 type TextureFormat = {
   format: GLenum;
   internalFormat: GLenum;
+  supportsLinearFiltering: boolean;
   type: GLenum;
 };
 
@@ -122,7 +115,12 @@ const getTextureFormat = (gl: OGLRenderingContext): TextureFormat => {
       throw new Error('Floating-point render targets are unavailable.');
     }
     const gl2 = gl as WebGL2RenderingContext;
-    return { format: gl.RGBA, internalFormat: gl2.RGBA16F, type: gl2.HALF_FLOAT };
+    return {
+      format: gl.RGBA,
+      internalFormat: gl2.RGBA16F,
+      supportsLinearFiltering: Boolean(gl.getExtension('OES_texture_float_linear')),
+      type: gl2.HALF_FLOAT,
+    };
   }
 
   const halfFloat = gl.getExtension('OES_texture_half_float') as {
@@ -131,7 +129,12 @@ const getTextureFormat = (gl: OGLRenderingContext): TextureFormat => {
   if (!halfFloat || !gl.getExtension('EXT_color_buffer_half_float')) {
     throw new Error('Half-floating-point render targets are unavailable.');
   }
-  return { format: gl.RGBA, internalFormat: gl.RGBA, type: halfFloat.HALF_FLOAT_OES };
+  return {
+    format: gl.RGBA,
+    internalFormat: gl.RGBA,
+    supportsLinearFiltering: Boolean(gl.getExtension('OES_texture_half_float_linear')),
+    type: halfFloat.HALF_FLOAT_OES,
+  };
 };
 
 const createProgram = (
@@ -169,21 +172,18 @@ const setUniform = (pass: Pass, name: string, value: unknown) => {
 };
 
 class FluidEngine {
-  private readonly canvas: HTMLCanvasElement;
   private readonly geometry: Triangle;
   private readonly gl: OGLRenderingContext;
   private readonly hero: HTMLElement;
-  private readonly maskCanvas = document.createElement('canvas');
-  private readonly maskTexture: Texture;
   private readonly onReady: () => void;
   private readonly passes: Record<string, Pass>;
   private readonly pointerDot: HTMLElement;
   private readonly renderer: Renderer;
   private readonly resizeObserver: ResizeObserver;
-  private readonly textSource: HTMLElement;
   private readonly textureFormat: TextureFormat;
 
   private disposed = false;
+  private elapsedTime = Math.random() * 120;
   private frame: number | undefined;
   private frameCount = 0;
   private frameTimeTotal = 0;
@@ -199,20 +199,14 @@ class FluidEngine {
   private pointerTarget: [number, number] = [0.5, 0.5];
   private qualityCooldown = 0;
   private qualityIndex: number;
+  private targetAspect = 1;
   private targets: FluidTargets | undefined;
   private warmupFrames = 0;
 
-  constructor(
-    hero: HTMLElement,
-    canvas: HTMLCanvasElement,
-    textSource: HTMLElement,
-    onReady: () => void,
-  ) {
+  constructor(hero: HTMLElement, canvas: HTMLCanvasElement, onReady: () => void) {
     const pointerDot = hero.querySelector<HTMLElement>('[data-fluid-pointer-dot]');
     if (!pointerDot) throw new Error('The fluid pointer dot is unavailable.');
     this.hero = hero;
-    this.canvas = canvas;
-    this.textSource = textSource;
     this.pointerDot = pointerDot;
     this.onReady = onReady;
     this.qualityIndex = window.matchMedia(MOBILE_QUERY).matches ? 1 : 0;
@@ -230,13 +224,6 @@ class FluidEngine {
     this.gl = this.renderer.gl;
     this.textureFormat = getTextureFormat(this.gl);
     this.geometry = new Triangle(this.gl);
-    this.maskTexture = new Texture(this.gl, {
-      flipY: true,
-      generateMipmaps: false,
-      image: this.maskCanvas,
-      magFilter: this.gl.LINEAR,
-      minFilter: this.gl.LINEAR,
-    });
     this.passes = this.createPasses();
     this.resizeObserver = new ResizeObserver(this.handleResize);
   }
@@ -245,7 +232,6 @@ class FluidEngine {
     this.rebuildTargets();
     this.resizeObserver.observe(this.hero);
     this.hero.dataset.fluidQuality = QUALITY_TIERS[this.qualityIndex].name;
-    void document.fonts?.ready.then(this.drawTextMask);
     this.startLoop();
   }
 
@@ -298,7 +284,6 @@ class FluidEngine {
     this.disposeTargets();
     for (const pass of Object.values(this.passes)) pass.program.remove();
     this.geometry.remove();
-    this.gl.deleteTexture(this.maskTexture.texture);
   }
 
   private readonly createPasses = () => ({
@@ -312,7 +297,9 @@ class FluidEngine {
     display: createPass(this.gl, this.geometry, displayFragment, {
       uCssResolution: { value: [1, 1] },
       uDye: { value: null },
-      uTextMask: { value: this.maskTexture },
+      uDyeTexelSize: { value: [1, 1] },
+      uTime: { value: this.elapsedTime },
+      uVelocity: { value: null },
     }),
     divergence: createPass(this.gl, this.geometry, divergenceFragment, {
       uTexelSize: { value: [1, 1] },
@@ -382,12 +369,17 @@ class FluidEngine {
     const quality = QUALITY_TIERS[this.qualityIndex];
     this.renderer.dpr = Math.min(window.devicePixelRatio || 1, quality.dprCap);
     const aspect = Math.min(Math.max(this.hero.clientWidth / this.hero.clientHeight, 0.7), 2.2);
+    this.targetAspect = aspect;
     const simulationWidth = Math.round(quality.simulationResolution * aspect);
     const dyeWidth = Math.round(quality.dyeResolution * aspect);
     const createSimulationTarget = () =>
       this.createTarget(simulationWidth, quality.simulationResolution);
     const createDyeTarget = () =>
-      this.createTarget(dyeWidth, quality.dyeResolution, this.gl.LINEAR);
+      this.createTarget(
+        dyeWidth,
+        quality.dyeResolution,
+        this.textureFormat.supportsLinearFiltering ? this.gl.LINEAR : this.gl.NEAREST,
+      );
     this.targets = {
       divergence: createSimulationTarget(),
       dye: createDoubleTarget(createDyeTarget),
@@ -412,58 +404,17 @@ class FluidEngine {
     this.targets = undefined;
   }
 
-  private readonly drawTextMask = () => {
-    if (this.disposed) return;
-    const width = this.canvas.width;
-    const height = this.canvas.height;
-    if (width < 1 || height < 1) return;
-    this.maskCanvas.width = width;
-    this.maskCanvas.height = height;
-    const context = this.maskCanvas.getContext('2d');
-    if (!context) return;
-
-    const heroBounds = this.hero.getBoundingClientRect();
-    const scaleX = width / heroBounds.width;
-    const scaleY = height / heroBounds.height;
-    context.clearRect(0, 0, width, height);
-    context.fillStyle = '#ffffff';
-    context.textBaseline = 'middle';
-
-    const lines = this.textSource.querySelectorAll<HTMLElement>('[data-fluid-mask-line]');
-    for (const line of lines) {
-      const bounds = line.getBoundingClientRect();
-      const style = getComputedStyle(line);
-      const textAlign = ['center', 'left', 'right'].includes(style.textAlign)
-        ? (style.textAlign as CanvasTextAlign)
-        : 'left';
-      let textX = bounds.left;
-      if (textAlign === 'center') textX += bounds.width / 2;
-      if (textAlign === 'right') textX = bounds.right;
-      const fontSize = Number(style.fontSize.replace('px', ''));
-      const lineHeight = Number(style.lineHeight.replace('px', ''));
-      const baselineOffset = Math.max((fontSize - lineHeight) / 2, 0);
-      context.font = `${style.fontWeight} ${fontSize * scaleY}px ${style.fontFamily}`;
-      context.textAlign = textAlign;
-      if ('letterSpacing' in context) {
-        context.letterSpacing = `${Number(style.letterSpacing.replace('px', '')) * scaleX}px`;
-      }
-      context.fillText(
-        line.textContent?.trim() ?? '',
-        (textX - heroBounds.left) * scaleX,
-        (bounds.top - heroBounds.top + bounds.height / 2 + baselineOffset) * scaleY,
-      );
-    }
-    this.maskTexture.image = this.maskCanvas;
-    this.maskTexture.needsUpdate = true;
-  };
-
   private readonly handleResize = () => {
     if (this.disposed) return;
     const width = Math.max(this.hero.clientWidth, 1);
     const height = Math.max(this.hero.clientHeight, 1);
+    const aspect = Math.min(Math.max(width / height, 0.7), 2.2);
+    if (this.targets && Math.abs(aspect - this.targetAspect) > 0.04) {
+      this.rebuildTargets();
+      return;
+    }
     this.renderer.setSize(width, height);
     setUniform(this.passes.display, 'uCssResolution', [width, height]);
-    this.drawTextMask();
   };
 
   private renderPass(pass: Pass, target?: RenderTarget) {
@@ -521,6 +472,7 @@ class FluidEngine {
     const dyeTexel = [1 / targets.dye.read.width, 1 / targets.dye.read.height];
     const normalizedDelta = delta / MAX_DELTA_SECONDS;
     const normalizedDissipation = dissipationDelta / MAX_DELTA_SECONDS;
+    this.elapsedTime += dissipationDelta;
     this.advancePointer(delta);
 
     const advection = this.passes.advection;
@@ -532,7 +484,7 @@ class FluidEngine {
     this.renderPass(advection, targets.velocity.write);
     targets.velocity.swap();
 
-    setUniform(advection, 'uDissipation', Math.pow(0.95, normalizedDissipation));
+    setUniform(advection, 'uDissipation', Math.pow(0.965, normalizedDissipation));
     setUniform(advection, 'uSource', targets.dye.read.texture);
     setUniform(advection, 'uTexelSize', dyeTexel);
     setUniform(advection, 'uVelocity', targets.velocity.read.texture);
@@ -581,6 +533,9 @@ class FluidEngine {
 
     const display = this.passes.display;
     setUniform(display, 'uDye', targets.dye.read.texture);
+    setUniform(display, 'uDyeTexelSize', dyeTexel);
+    setUniform(display, 'uTime', this.elapsedTime);
+    setUniform(display, 'uVelocity', targets.velocity.read.texture);
     this.renderPass(display);
   }
 
@@ -643,8 +598,7 @@ class FluidEngine {
 export const mountFluidHero = (root: HTMLElement) => {
   const canvas = root.querySelector<HTMLCanvasElement>('[data-fluid-canvas]');
   const pointerDot = root.querySelector<HTMLElement>('[data-fluid-pointer-dot]');
-  const textSource = root.querySelector<HTMLElement>('[data-fluid-title-source]');
-  if (!canvas || !pointerDot || !textSource) return () => {};
+  if (!canvas || !pointerDot) return () => {};
 
   const controller = new AbortController();
   const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY);
@@ -672,7 +626,7 @@ export const mountFluidHero = (root: HTMLElement) => {
 
     let candidate: FluidEngine | undefined;
     try {
-      candidate = new FluidEngine(root, canvas, textSource, () => {
+      candidate = new FluidEngine(root, canvas, () => {
         if (!disposed && !reducedMotion.matches) root.dataset.fluidState = 'live';
       });
       candidate.initialize();

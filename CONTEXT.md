@@ -41,23 +41,19 @@ A warm-paper, ink-line diagram that connects AI product outcomes to the AI produ
 _Avoid_: Fake chat interface, neural-network motif, decorative node map
 
 **Integrated hero surface**:
-A hero in which typography and background belong to one pointer-responsive visual field. The interaction may affect both, but the message remains continuously legible.
-_Avoid_: Separate background effect, decorative shader panel
+A hero whose full-bleed symbol field sits behind the existing centred composition and masthead. The visual surface responds to motion while every content layer remains crisp, stable, and continuously legible.
+_Avoid_: Separate shader panel, animation above the copy, recomposed hero content
 
-**Warm paper field**:
-The hero’s nearly flat resting state. Its print dither remains latent until interaction, and orange stays limited to brand punctuation and the temporary fluid response.
-_Avoid_: Ambient texture field, mark echo, molten backdrop, neon field, static orange background
+**Warm paper symbol field**:
+A dense edge-to-edge field of tiny graphite checker, cross, and four-point marks on warm paper. Broad low-contrast density bands and gentle displacement keep it atmospheric without competing with the headline.
+_Avoid_: Blank paper, sparse particles, branded icons, coarse pixels, neon field
 
-**Fluid wake**:
-A broad, connected trail of velocity-driven fluid splats that reveals a bold temporary orange print dither, passes through the headline’s text mask, and dissolves fully within a few seconds.
-_Avoid_: Full-height pointer wipe, persistent paint stroke, cursor spotlight
-
-**Text response**:
-Reference-style text-mask compositing in which the fluid dither and bold temporary orange tint pass through stable headline glyphs without changing their geometry.
-_Avoid_: Text morphing, glitch text, warped letterforms, full chromatic aberration
+**Fluid trail**:
+A connected velocity-driven wake that bends nearby symbols and temporarily turns them orange along an eased pointer path, then dissipates without a visible reset.
+_Avoid_: Full-height pointer wipe, persistent paint stroke, cursor spotlight, solid high-contrast ribbon
 
 **Tap pulse**:
-The touch equivalent of the fluid wake: one small dithered orange bloom that diffuses from a tap and passes through the headline mask while native swipe scrolling remains uninterrupted.
+The simplified touch equivalent of fluid displacement: one subtle local disturbance from a stationary tap while native swipe scrolling remains uninterrupted.
 _Avoid_: Touch painting, scroll-blocking drag
 
 **Hero composition**:
@@ -72,14 +68,14 @@ _Avoid_: Custom cursor replacement, full-page cursor follower, glowing cursor
 A transparent masthead sharing the warm paper field while its identity and navigation remain crisp, ink-coloured, and outside the shader’s text response.
 _Avoid_: Separate header strip, shader-distorted navigation
 
-**Reactive headline**:
-The headline is the only copy layer included in the shader’s text response. Eyebrow, clarification, and actions stay crisp and stable.
-_Avoid_: Reactive body copy, colour-shifting controls
+**Stable hero content**:
+The headline, eyebrow, clarification, and actions all remain above the canvas with unchanged geometry, colour, and interaction behavior.
+_Avoid_: Text masks, reactive copy, colour-shifting controls
 
 **Precise fluid motion**:
-A controlled wake with soft organic edges, slight elastic pointer follow, and a short dissolve. Smoothed pointer speed changes the connected trail’s strength and width within restrained limits.
-_Avoid_: Raw cursor stamping, exaggerated lag, languid wash, frantic splatter, fixed digital brush
+Slow, incommensurate ambient waves combine with slight elastic pointer follow and a short local dissolve. Motion remains continuous, low-amplitude, and free of obvious loop resets.
+_Avoid_: Raw cursor stamping, exaggerated lag, frantic splatter, fixed digital brush
 
-**Fine print dither**:
-A small ordered texture that reads like contemporary print grain at normal viewing distance rather than overt pixel art.
-_Avoid_: Coarse Bayer blocks, retro-computer texture
+**Fine geometric symbols**:
+Small deterministic checker, cross, and four-point modules that read as a contemporary monochrome texture at normal viewing distance rather than overt pixel art.
+_Avoid_: Coarse Bayer blocks, retro-computer texture, recognizable logos

@@ -32,14 +32,13 @@ import { heroCopy } from '../copy';
       <span aria-hidden="true"></span>
     </div>
 
-    <div class="hero__title-wrap" data-fluid-title-source>
+    <div class="hero__title-wrap">
       <h1 id="hero-title" aria-label={heroCopy.title.accessible}>
         <span class="hero__title-visual" aria-hidden="true">
           <span
             class="hero__title-line"
             data-title-line="first"
             data-motion="hero-title-line"
-            data-fluid-mask-line
           >
             {heroCopy.title.firstLine}
           </span>
@@ -51,7 +50,6 @@ import { heroCopy } from '../copy';
             <span
               class="hero__title-middle"
               data-title-part="middle"
-              data-fluid-mask-line
             >
               {heroCopy.title.middleLine}
             </span>
@@ -59,7 +57,6 @@ import { heroCopy } from '../copy';
             <span
               class="hero__title-last"
               data-title-part="last"
-              data-fluid-mask-line
             >
               {heroCopy.title.lastLine}<span class="hero__title-period">
                 {heroCopy.title.punctuation}
@@ -148,9 +145,9 @@ import { heroCopy } from '../copy';
   }
 
   .hero__pointer-dot {
-    background: var(--color-tertiary);
+    background: color-mix(in srgb, var(--color-primary) 42%, transparent);
     border-radius: 50%;
-    height: 8px;
+    height: 6px;
     left: 0;
     opacity: 0;
     pointer-events: none;
@@ -158,7 +155,7 @@ import { heroCopy } from '../copy';
     top: 0;
     transition: opacity 120ms ease-out;
     visibility: hidden;
-    width: 8px;
+    width: 6px;
     will-change: transform;
     z-index: 3;
   }
@@ -220,14 +217,6 @@ import { heroCopy } from '../copy';
   .hero__title-line {
     display: block;
     white-space: nowrap;
-  }
-
-  .hero[data-fluid-state='live'] [data-fluid-mask-line] {
-    color: color-mix(in srgb, var(--color-primary) 24%, transparent);
-  }
-
-  .hero[data-fluid-state='live'] .hero__title-period {
-    color: var(--color-tertiary);
   }
 
   .hero__title-middle,
@@ -342,7 +331,6 @@ import { heroCopy } from '../copy';
     .hero__title-space {
       display: none;
     }
-
 
     .hero__clarification {
       gap: 20px;

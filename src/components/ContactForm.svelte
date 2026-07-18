@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { actions } from 'astro:actions';
+  import { z } from 'astro/zod';
   import { tick } from 'svelte';
   import { Button, Checkbox, Label, Select } from 'bits-ui';
-  import * as v from 'valibot';
   import { contactPageCopy } from '../copy';
 
   const copy = contactPageCopy.form;
@@ -27,22 +28,18 @@
   type ValidationField = (typeof validationFields)[number];
   type FieldErrors = Partial<Record<ValidationField, string>>;
 
-  const contactSchema = v.object({
-    name: v.pipe(v.string(), v.trim(), v.nonEmpty(copy.validation.name)),
-    email: v.pipe(
-      v.string(),
-      v.trim(),
-      v.nonEmpty(copy.validation.emailRequired),
-      v.email(copy.validation.emailInvalid),
-    ),
-    organization: v.optional(v.pipe(v.string(), v.trim())),
-    capabilities: v.pipe(
-      v.array(v.picklist(capabilityValues)),
-      v.minLength(1, copy.validation.capabilities),
-    ),
-    idea: v.pipe(v.string(), v.trim(), v.nonEmpty(copy.validation.idea)),
-    budget: v.optional(v.picklist(budgetValues)),
-    startWindow: v.optional(v.picklist(startWindowValues)),
+  const contactSchema = z.object({
+    name: z.string().trim().min(1, copy.validation.name),
+    email: z
+      .string()
+      .trim()
+      .min(1, copy.validation.emailRequired)
+      .pipe(z.email({ error: copy.validation.emailInvalid })),
+    organization: z.string().trim().optional(),
+    capabilities: z.array(z.enum(capabilityValues)).min(1, copy.validation.capabilities),
+    idea: z.string().trim().min(1, copy.validation.idea),
+    budget: z.enum(budgetValues).optional(),
+    startWindow: z.enum(startWindowValues).optional(),
   });
 
   const budgetItems = copy.fields.budget.options.map(({ value, label }) => ({ value, label }));
@@ -60,8 +57,12 @@
   let startWindow = $state('');
   let errors = $state<FieldErrors>({});
   let showValidationSummary = $state(false);
-  let showPrototypeNotice = $state(false);
-  let prototypeNotice: HTMLElement | undefined = $state();
+  let submissionState = $state<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  let actionNotice: HTMLElement | undefined = $state();
+
+  function clearSubmissionState() {
+    submissionState = 'idle';
+  }
 
   function isCapability(value: string): value is Capability {
     return (capabilityValues as readonly string[]).includes(value);
@@ -92,14 +93,14 @@
         .filter((value) => value !== 'not-sure');
     }
     clearError('capabilities');
-    showPrototypeNotice = false;
+    clearSubmissionState();
   }
 
-  function collectErrors(issues: v.BaseIssue<unknown>[]) {
+  function collectErrors(issues: ReadonlyArray<{ path: readonly PropertyKey[]; message: string }>) {
     const nextErrors: FieldErrors = {};
 
     for (const issue of issues) {
-      const field = issue.path?.[0]?.key;
+      const field = issue.path[0];
       if (isValidationField(field) && !nextErrors[field]) nextErrors[field] = issue.message;
     }
 
@@ -115,9 +116,9 @@
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
-    showPrototypeNotice = false;
+    clearSubmissionState();
 
-    const result = v.safeParse(contactSchema, {
+    const result = contactSchema.safeParse({
       name,
       email,
       organization: organization || undefined,
@@ -128,7 +129,7 @@
     });
 
     if (!result.success) {
-      errors = collectErrors(result.issues);
+      errors = collectErrors(result.error.issues);
       showValidationSummary = true;
       await focusFirstError(errors);
       return;
@@ -136,9 +137,17 @@
 
     errors = {};
     showValidationSummary = false;
-    showPrototypeNotice = true;
+    submissionState = 'submitting';
+
+    try {
+      const { error } = await actions.submitInquiry(result.data);
+      submissionState = error ? 'error' : 'success';
+    } catch {
+      submissionState = 'error';
+    }
+
     await tick();
-    prototypeNotice?.focus();
+    actionNotice?.focus();
   }
 </script>
 
@@ -176,7 +185,7 @@
             aria-describedby={errors.name ? 'contact-name-error' : undefined}
             oninput={() => {
               clearError('name');
-              showPrototypeNotice = false;
+              clearSubmissionState();
             }}
           />
           {#if errors.name}
@@ -199,7 +208,7 @@
             aria-describedby={errors.email ? 'contact-email-error' : undefined}
             oninput={() => {
               clearError('email');
-              showPrototypeNotice = false;
+              clearSubmissionState();
             }}
           />
           {#if errors.email}
@@ -218,7 +227,7 @@
             type="text"
             autocomplete={copy.fields.organization.autocomplete}
             bind:value={organization}
-            oninput={() => (showPrototypeNotice = false)}
+            oninput={clearSubmissionState}
           />
         </div>
       </div>
@@ -279,7 +288,7 @@
           aria-describedby={errors.idea ? 'contact-idea-help contact-idea-error' : 'contact-idea-help'}
           oninput={() => {
             clearError('idea');
-            showPrototypeNotice = false;
+            clearSubmissionState();
           }}
         ></textarea>
         {#if errors.idea}
@@ -297,7 +306,7 @@
             type="single"
             items={budgetItems}
             bind:value={budget}
-            onValueChange={() => (showPrototypeNotice = false)}
+            onValueChange={clearSubmissionState}
           >
             <Select.Trigger class="contact-select-trigger" id="contact-budget">
               <Select.Value placeholder={copy.fields.budget.placeholder} />
@@ -329,7 +338,7 @@
             type="single"
             items={startWindowItems}
             bind:value={startWindow}
-            onValueChange={() => (showPrototypeNotice = false)}
+            onValueChange={clearSubmissionState}
           >
             <Select.Trigger class="contact-select-trigger" id="contact-start-window">
               <Select.Value placeholder={copy.fields.startWindow.placeholder} />
@@ -355,22 +364,37 @@
 
       <div class="contact-form__footer">
         <p>Project inquiries only. We will begin by email.</p>
-        <Button.Root class="contact-submit" type="submit">
-          <span>{copy.submitLabel}</span>
+        <Button.Root
+          class="contact-submit"
+          type="submit"
+          disabled={submissionState === 'submitting'}
+          aria-busy={submissionState === 'submitting'}
+        >
+          <span>{submissionState === 'submitting' ? copy.submittingLabel : copy.submitLabel}</span>
           <span aria-hidden="true">↗</span>
         </Button.Root>
       </div>
 
-      {#if showPrototypeNotice}
+      {#if submissionState === 'success'}
         <div
-          class="contact-form__prototype"
+          class="contact-form__notice"
           role="status"
           aria-live="polite"
           tabindex="-1"
-          bind:this={prototypeNotice}
+          bind:this={actionNotice}
         >
-          <strong>{copy.prototypeNotice.title}</strong>
-          <span>{copy.prototypeNotice.body}</span>
+          <strong>{copy.actionNotice.success.title}</strong>
+          <span>{copy.actionNotice.success.body}</span>
+        </div>
+      {:else if submissionState === 'error'}
+        <div
+          class="contact-form__notice contact-form__notice--error"
+          role="alert"
+          tabindex="-1"
+          bind:this={actionNotice}
+        >
+          <strong>{copy.actionNotice.error.title}</strong>
+          <span>{copy.actionNotice.error.body}</span>
         </div>
       {/if}
     </form>
@@ -700,22 +724,32 @@
     padding-inline: 28px;
   }
 
-  .contact-form__prototype {
-    border: 1px solid var(--color-tertiary);
+  :global(.contact-submit:disabled) {
+    cursor: wait;
+    opacity: 0.72;
+  }
+
+  .contact-form__notice {
+    --notice-color: var(--color-tertiary);
+    border: 1px solid var(--notice-color);
     display: grid;
     gap: 8px;
     padding: 20px;
   }
 
-  .contact-form__prototype strong {
-    color: var(--color-tertiary);
+  .contact-form__notice--error {
+    --notice-color: var(--color-error);
+  }
+
+  .contact-form__notice strong {
+    color: var(--notice-color);
     font-family: var(--font-mono);
     font-size: var(--type-label-md-size);
     letter-spacing: var(--type-label-md-letter-spacing);
     text-transform: uppercase;
   }
 
-  .contact-form__prototype span {
+  .contact-form__notice span {
     color: var(--form-muted);
   }
 

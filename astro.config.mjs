@@ -1,6 +1,7 @@
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import svelte from '@astrojs/svelte';
+import vercel from '@astrojs/vercel';
 // @ts-check
 import { defineConfig, fontProviders } from 'astro/config';
 
@@ -9,6 +10,7 @@ const site = process.env.SITE_URL ?? 'https://web-kappa-brown-44.vercel.app';
 // https://astro.build/config
 export default defineConfig({
   site,
+  adapter: vercel(),
   fonts: [
     {
       name: 'Inter',

@@ -136,7 +136,7 @@ test('places the qualified project inquiry below the contact hero', async ({ pag
   ).toHaveCount(0);
 });
 
-test('validates required fields with Valibot and focuses the first error', async ({ page }) => {
+test('validates required fields with Zod and focuses the first error', async ({ page }) => {
   await page.goto('/contact');
   const formSection = getFormSection(page);
 
@@ -181,7 +181,16 @@ test('keeps Not sure yet exclusive within the capability multi-select', async ({
   await expect(notSure).toHaveAttribute('data-state', 'unchecked');
 });
 
-test('supports optional Bits UI selects and shows an honest prototype notice', async ({ page }) => {
+test('submits through the Astro Action with loading and success states', async ({ page }) => {
+  let releaseSubmission = () => {};
+  const submissionPending = new Promise<void>((resolve) => {
+    releaseSubmission = resolve;
+  });
+  await page.route(/\/_actions\/submitInquiry\/?$/u, async (route) => {
+    await submissionPending;
+    await route.fulfill({ status: 204 });
+  });
+
   await page.goto('/contact');
   const formSection = getFormSection(page);
 
@@ -209,13 +218,56 @@ test('supports optional Bits UI selects and shows an honest prototype notice', a
   await page.getByRole('option', { name: 'In 1–3 months' }).click();
   await expect(startWindow).toContainText('In 1–3 months');
 
-  await formSection.getByRole('button', { name: 'Send the idea' }).click();
+  const submitButton = formSection.locator('button[type="submit"]');
+  await expect(submitButton).toHaveAccessibleName('Send the idea');
+  await submitButton.click();
+  await expect(submitButton).toBeDisabled();
+  await expect(submitButton).toContainText('Sending…');
+
+  releaseSubmission();
 
   const notice = formSection.getByRole('status');
   await expect(notice).toBeFocused();
-  await expect(notice).toContainText('Prototype only.');
-  await expect(notice).toContainText('This form is a preview. Nothing has been sent or stored.');
+  await expect(notice).toContainText('Inquiry sent.');
+  await expect(notice).toContainText('Thanks — your idea is on its way. We will begin by email.');
   await expect(page).toHaveURL(/\/contact$/u);
+});
+
+test('preserves the inquiry and shows an error when delivery fails', async ({ page }) => {
+  await page.route(/\/_actions\/submitInquiry\/?$/u, async (route) => {
+    await route.fulfill({
+      status: 502,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        type: 'AstroActionError',
+        code: 'BAD_GATEWAY',
+        message: 'The inquiry could not be delivered.',
+      }),
+    });
+  });
+
+  await page.goto('/contact');
+  const formSection = getFormSection(page);
+  const name = formSection.getByLabel('Your name');
+  await name.fill('Grace Hopper');
+  await formSection.getByLabel('Email').fill('grace@example.com');
+  await formSection.getByRole('checkbox', { name: 'Engineering' }).click();
+  await formSection
+    .getByLabel('Tell us about the idea')
+    .fill('A resilient interface for a complex technical system.');
+
+  await formSection.getByRole('button', { name: 'Send the idea' }).click();
+
+  const notice = formSection.getByRole('alert');
+  await expect(notice).toBeFocused();
+  await expect(notice).toContainText('Could not send the inquiry.');
+  await expect(notice).toContainText(
+    'Something went wrong. Your details are still in the form, so you can try again.',
+  );
+  await expect(name).toHaveValue('Grace Hopper');
+
+  await name.fill('Grace Brewster Hopper');
+  await expect(notice).toHaveCount(0);
 });
 
 test('stays usable without horizontal overflow on mobile', async ({ page }) => {

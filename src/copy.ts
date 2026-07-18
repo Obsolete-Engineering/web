@@ -131,6 +131,7 @@ export const contactPageCopy = {
       },
     },
     submitLabel: 'Send the idea',
+    submittingLabel: 'Sending…',
     validation: {
       summary: 'Check the highlighted fields and try again.',
       name: 'Tell us your name.',
@@ -139,9 +140,15 @@ export const contactPageCopy = {
       capabilities: 'Choose at least one area, or select Not sure yet.',
       idea: 'Give us a little context about the idea.',
     },
-    prototypeNotice: {
-      title: 'Prototype only.',
-      body: 'This form is a preview. Nothing has been sent or stored.',
+    actionNotice: {
+      success: {
+        title: 'Inquiry sent.',
+        body: 'Thanks — your idea is on its way. We will begin by email.',
+      },
+      error: {
+        title: 'Could not send the inquiry.',
+        body: 'Something went wrong. Your details are still in the form, so you can try again.',
+      },
     },
   },
 } as const;

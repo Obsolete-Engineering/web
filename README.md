@@ -50,13 +50,13 @@ If `SITE_URL` is not set, builds use the current production Vercel URL.
 
 ## Contact form delivery
 
-The project inquiry form is validated in the browser and by an Astro Action, then delivered through Web3Forms from the server. The Web3Forms access key is not included in the client bundle.
+The project inquiry form is validated in the browser, then submitted directly to Web3Forms. Web3Forms recommends browser-side submission; server-side submission requires a paid plan and IP whitelisting.
 
 1. Create an access key for the receiving email address at [Web3Forms](https://web3forms.com/).
 2. Copy `.env.example` to `.env` and replace the placeholder for local development.
-3. Set `WEB3FORMS_ACCESS_KEY` in each deployed Vercel environment that should accept inquiries.
+3. Set `PUBLIC_WEB3FORMS_ACCESS_KEY` in each deployed Vercel environment that should accept inquiries.
 
-Web3Forms documents its form access key as safe for client-side forms, but this integration keeps it server-side. Do not use a Web3Forms Submissions API key here; that is a separate secret credential for reading submissions.
+Web3Forms form access keys are designed to be included in client-side forms. Do not use a Web3Forms Submissions API key here; that is a separate secret credential for reading submissions.
 
 ## 👀 Want to learn more?
 

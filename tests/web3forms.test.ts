@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { submitToWeb3Forms } from '../src/actions/web3forms';
+import { submitToWeb3Forms } from '../src/lib/web3forms';
 
 const payload = {
   access_key: 'test-access-key',
@@ -38,11 +38,11 @@ describe('submitToWeb3Forms', () => {
 
   test('rejects malformed Web3Forms responses', async () => {
     const fetcher = (() =>
-      Promise.resolve(new Response('not json', { status: 502 }))) as typeof fetch;
+      Promise.resolve(new Response('<h1>Forbidden</h1>', { status: 403 }))) as typeof fetch;
 
     await assert.rejects(
       submitToWeb3Forms(payload, fetcher),
-      /Web3Forms returned an invalid response \(502\)\./u,
+      /Web3Forms returned an invalid response \(403\)\./u,
     );
   });
 });

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { actions } from 'astro:actions';
   import { z } from 'astro/zod';
   import { onMount, tick } from 'svelte';
   import { Button, Checkbox, Label, Select } from 'bits-ui';
   import { contactPageCopy } from '../copy';
+  import { submitToWeb3Forms } from '../lib/web3forms';
   import { mountSurfaceGrain } from '../scripts/surface-grain';
 
   const copy = contactPageCopy.form;
@@ -118,6 +118,37 @@
     document.querySelector<HTMLElement>(`#${targetId}`)?.focus();
   }
 
+  function createSubmissionPayload(
+    input: z.infer<typeof contactSchema>,
+    accessKey: string,
+  ): Record<string, string> {
+    const capabilityLabels = input.capabilities.map(
+      (value) =>
+        copy.fields.capabilities.options.find((option) => option.value === value)?.label ?? value,
+    );
+    const budgetLabel = copy.fields.budget.options.find(
+      (option) => option.value === input.budget,
+    )?.label;
+    const startWindowLabel = copy.fields.startWindow.options.find(
+      (option) => option.value === input.startWindow,
+    )?.label;
+    const payload: Record<string, string> = {
+      access_key: accessKey,
+      subject: 'New project inquiry from the Obsolete website',
+      from_name: 'Obsolete website',
+      name: input.name,
+      email: input.email,
+      message: input.idea,
+      capabilities: capabilityLabels.join(', '),
+    };
+
+    if (input.organization) payload.organization = input.organization;
+    if (budgetLabel) payload.budget = budgetLabel;
+    if (startWindowLabel) payload.start_window = startWindowLabel;
+
+    return payload;
+  }
+
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     clearSubmissionState();
@@ -144,8 +175,10 @@
     submissionState = 'submitting';
 
     try {
-      const { error } = await actions.submitInquiry(result.data);
-      submissionState = error ? 'error' : 'success';
+      const accessKey = import.meta.env.PUBLIC_WEB3FORMS_ACCESS_KEY;
+      if (!accessKey) throw new Error('PUBLIC_WEB3FORMS_ACCESS_KEY is not configured.');
+      await submitToWeb3Forms(createSubmissionPayload(result.data, accessKey));
+      submissionState = 'success';
     } catch {
       submissionState = 'error';
     }

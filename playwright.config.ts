@@ -16,6 +16,10 @@ export default defineConfig({
   },
   webServer: {
     command: 'bunx astro dev --host localhost --port 4321',
+    env: {
+      ...process.env,
+      PUBLIC_WEB3FORMS_ACCESS_KEY: 'test-access-key',
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
     url: baseURL,

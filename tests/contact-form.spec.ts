@@ -414,14 +414,20 @@ test('keeps Not sure yet exclusive within the capability multi-select', async ({
   await expect(notSure).toHaveAttribute('data-state', 'unchecked');
 });
 
-test('submits through the Astro Action with loading and success states', async ({ page }) => {
+test('submits to Web3Forms with loading and success states', async ({ page }) => {
   let releaseSubmission = () => {};
+  let submittedPayload: Record<string, string> | undefined;
   const submissionPending = new Promise<void>((resolve) => {
     releaseSubmission = resolve;
   });
-  await page.route(/\/_actions\/submitInquiry\/?$/u, async (route) => {
+  await page.route('https://api.web3forms.com/submit', async (route) => {
+    submittedPayload = route.request().postDataJSON() as Record<string, string>;
     await submissionPending;
-    await route.fulfill({ status: 204 });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, message: 'Submission received.' }),
+    });
   });
 
   await page.goto('/contact');
@@ -464,18 +470,23 @@ test('submits through the Astro Action with loading and success states', async (
   await expect(notice).toContainText('Inquiry sent.');
   await expect(notice).toContainText('Thanks — your idea is on its way. We will begin by email.');
   await expect(page).toHaveURL(/\/contact$/u);
+  expect(submittedPayload).toMatchObject({
+    name: 'Ada Lovelace',
+    email: 'ada@example.com',
+    organization: 'Analytical Engines',
+    capabilities: 'Direction',
+    message: 'A digital experience that helps people understand an ambitious new machine.',
+    budget: '£10–25k',
+    start_window: 'In 1–3 months',
+  });
 });
 
 test('preserves the inquiry and shows an error when delivery fails', async ({ page }) => {
-  await page.route(/\/_actions\/submitInquiry\/?$/u, async (route) => {
+  await page.route('https://api.web3forms.com/submit', async (route) => {
     await route.fulfill({
-      status: 502,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        type: 'AstroActionError',
-        code: 'BAD_GATEWAY',
-        message: 'The inquiry could not be delivered.',
-      }),
+      status: 403,
+      contentType: 'text/html',
+      body: '<h1>Forbidden</h1>',
     });
   });
 

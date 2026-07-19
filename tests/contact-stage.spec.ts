@@ -11,7 +11,7 @@ const getContactStage = (page: Page) =>
 
 const getSculpture = (page: Page) => page.locator('[data-contact-sculpture]');
 
-test('stages the invitation and static sculpture together on supported desktops', async ({
+test('stages the invitation and live sculpture together on supported desktops', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -26,6 +26,9 @@ test('stages the invitation and static sculpture together on supported desktops'
   await expect(heading).toBeVisible();
   await expect(sculpture).toBeVisible();
   await expect(sculpture).toHaveAttribute('aria-hidden', 'true');
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'live');
+  await expect(sculpture.locator('[data-contact-sculpture-canvas]')).toBeVisible();
+  await expect(sculpture.locator('svg')).toBeHidden();
   await expect(sculpture.locator('a, button, input, [tabindex]')).toHaveCount(0);
 
   const measureComposition = () =>
@@ -80,6 +83,7 @@ test('keeps the existing text-led inquiry flow on smaller viewports', async ({ p
   await contact.scrollIntoViewIfNeeded();
   await expect(sculpture).toBeHidden();
   await expect(sculpture).toHaveCSS('display', 'none');
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'static');
 
   const heading = contact.getByRole('heading', { level: 2, name: invitationTitle });
   await expect(heading).toBeVisible();
@@ -107,6 +111,7 @@ test('does not reserve sculpture space for coarse-pointer visitors', async ({ br
   await page.goto('/');
 
   await expect(getSculpture(page)).toHaveCSS('display', 'none');
+  await expect(getSculpture(page)).toHaveAttribute('data-contact-sculpture-state', 'static');
   await expect(
     getContactStage(page).getByRole('link', { name: 'Start a project inquiry' }),
   ).toBeVisible();
@@ -121,7 +126,111 @@ test('presents the sculpture as a static poster for reduced motion', async ({ pa
 
   const sculpture = getSculpture(page);
   await expect(sculpture).toBeVisible();
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'static');
+  await expect(sculpture.locator('svg')).toBeVisible();
+  await expect(sculpture.locator('[data-contact-sculpture-canvas]')).toBeHidden();
   await expect(sculpture).toHaveCSS('animation-duration', '0s');
   await expect(sculpture).toHaveCSS('transition-duration', '0s');
   await expect(sculpture).toHaveCSS('pointer-events', 'none');
+});
+
+test('fails open to the poster when WebGL is unavailable', async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
+      contextId,
+      ...args
+    ) {
+      if (contextId === 'webgl' || contextId === 'webgl2') return null;
+      return Reflect.apply(originalGetContext, this, [contextId, ...args]);
+    } as typeof HTMLCanvasElement.prototype.getContext;
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+
+  const sculpture = getSculpture(page);
+  await sculpture.scrollIntoViewIfNeeded();
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'fallback');
+  await expect(sculpture.locator('svg')).toBeVisible();
+  await expect(sculpture.locator('[data-contact-sculpture-canvas]')).toBeHidden();
+  await expect(
+    getContactStage(page).getByRole('link', { name: 'Start a project inquiry' }),
+  ).toBeVisible();
+});
+
+test('fails open to the poster when shader initialization fails', async ({ page }) => {
+  await page.addInitScript(() => {
+    for (const prototype of [WebGLRenderingContext.prototype, WebGL2RenderingContext.prototype]) {
+      const getProgramParameter = prototype.getProgramParameter;
+      Object.defineProperty(prototype, 'getProgramParameter', {
+        configurable: true,
+        value(this: WebGLRenderingContext, program: WebGLProgram, parameter: GLenum) {
+          if (
+            this.canvas instanceof HTMLCanvasElement &&
+            this.canvas.matches('[data-contact-sculpture-canvas]') &&
+            parameter === this.LINK_STATUS
+          ) {
+            return false;
+          }
+          return Reflect.apply(getProgramParameter, this, [program, parameter]);
+        },
+      });
+    }
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+
+  const sculpture = getSculpture(page);
+  await sculpture.scrollIntoViewIfNeeded();
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'fallback');
+  await expect(sculpture.locator('svg')).toBeVisible();
+  await expect(sculpture.locator('[data-contact-sculpture-canvas]')).toBeHidden();
+});
+
+test('pauses the live sculpture offscreen and resumes it safely', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+
+  const sculpture = getSculpture(page);
+  await sculpture.scrollIntoViewIfNeeded();
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'live');
+
+  await page.evaluate(() => window.scrollTo({ top: 0 }));
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'paused');
+
+  await sculpture.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'live');
+});
+
+test('disposes the live sculpture before an Astro page swap', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+
+  const sculpture = getSculpture(page);
+  await sculpture.scrollIntoViewIfNeeded();
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'live');
+
+  await page.evaluate(() => document.dispatchEvent(new Event('astro:before-swap')));
+
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'static');
+  await expect(sculpture.locator('svg')).toBeVisible();
+});
+
+test('restores the poster when the live sculpture loses its WebGL context', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+
+  const sculpture = getSculpture(page);
+  await sculpture.scrollIntoViewIfNeeded();
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'live');
+
+  await sculpture.locator('[data-contact-sculpture-canvas]').dispatchEvent('webglcontextlost');
+
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'fallback');
+  await expect(sculpture.locator('svg')).toBeVisible();
+  await expect(sculpture.locator('[data-contact-sculpture-canvas]')).toBeHidden();
+  await expect(
+    getContactStage(page).getByRole('link', { name: 'Start a project inquiry' }),
+  ).toBeVisible();
 });

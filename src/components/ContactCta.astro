@@ -27,7 +27,12 @@ const contourStrands = Array.from({ length: 52 }, (_, index) => {
       <div class="contact-cta__upper-stage" data-contact-upper-stage>
         <h2 id="contact-cta-title" data-motion="contact-copy">{contactCtaCopy.title}</h2>
 
-        <div class="contact-cta__sculpture" data-contact-sculpture aria-hidden="true">
+        <div
+          class="contact-cta__sculpture"
+          data-contact-sculpture
+          data-contact-sculpture-state="poster"
+          aria-hidden="true"
+        >
           <svg viewBox="0 0 720 620" preserveAspectRatio="xMidYMid meet" focusable="false">
             <defs>
               <clipPath id="contact-sculpture-silhouette">
@@ -74,6 +79,12 @@ const contourStrands = Array.from({ length: 52 }, (_, index) => {
               ></path>
             </g>
           </svg>
+          <canvas
+            class="contact-cta__sculpture-canvas"
+            data-contact-sculpture-canvas
+            width="1"
+            height="1"
+          ></canvas>
         </div>
       </div>
 
@@ -100,6 +111,18 @@ const contourStrands = Array.from({ length: 52 }, (_, index) => {
     </div>
   </div>
 </section>
+
+<script>
+  import { mountContactSculpture } from '../scripts/contact-sculpture';
+
+  const sculpture = document.querySelector<HTMLElement>('[data-contact-sculpture]');
+  const dispose = sculpture ? mountContactSculpture(sculpture) : () => {};
+
+  document.addEventListener('astro:before-swap', dispose, { once: true });
+  window.addEventListener('pagehide', (event) => {
+    if (!event.persisted) dispose();
+  });
+</script>
 
 <style>
   .contact-cta {
@@ -176,12 +199,34 @@ const contourStrands = Array.from({ length: 52 }, (_, index) => {
     color: var(--color-primary);
     display: none;
     pointer-events: none;
+    position: relative;
   }
 
   .contact-cta__sculpture svg {
     height: 100%;
     overflow: visible;
+    visibility: visible;
     width: 100%;
+  }
+
+  .contact-cta__sculpture-canvas {
+    height: 100%;
+    inset: 0;
+    position: absolute;
+    visibility: hidden;
+    width: 100%;
+  }
+
+  .contact-cta__sculpture[data-contact-sculpture-state='live'] svg,
+  .contact-cta__sculpture[data-contact-sculpture-state='paused'] svg {
+    visibility: hidden;
+  }
+
+  .contact-cta__sculpture[data-contact-sculpture-state='live']
+    .contact-cta__sculpture-canvas,
+  .contact-cta__sculpture[data-contact-sculpture-state='paused']
+    .contact-cta__sculpture-canvas {
+    visibility: visible;
   }
 
   .contact-cta__sculpture-shadow {

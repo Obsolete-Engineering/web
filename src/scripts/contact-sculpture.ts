@@ -1,5 +1,13 @@
 import { Mesh, Program, Renderer, Triangle, type OGLRenderingContext } from 'ogl';
 
+import {
+  attachContactSculptureInteraction,
+  ContactSculptureInteraction,
+  type ContactSculpturePoint,
+} from './contact-sculpture-interaction';
+
+export { ContactSculptureInteraction } from './contact-sculpture-interaction';
+
 export type ContactSculptureQualityName = 'balanced' | 'dense' | 'economy';
 
 type ContactSculptureState = 'fallback' | 'live' | 'paused' | 'poster' | 'static';
@@ -85,13 +93,17 @@ const contourFragment = `
     tension += (foldOne * 0.028 - foldTwo * 0.022) * sin(point.y * 12.0);
     tension += 0.0024 * sin(uTime * 0.62 + point.x * 4.0 + point.y * 2.0);
 
-    vec2 pointerDelta = point - uPointer;
+    vec2 pointer = uPointer;
+    pointer.x = (pointer.x - 0.5) * aspectCorrection + 0.5;
+    vec2 pointerDelta = point - pointer;
     float pointerDistance = length(pointerDelta);
     float pointerDent = exp(-pointerDistance * pointerDistance * 34.0);
     tension += pointerDent * uPointerStrength * 0.018
       * pointerDelta.y / max(pointerDistance, 0.045);
 
-    vec2 rippleDelta = point - uRippleOrigin;
+    vec2 rippleOrigin = uRippleOrigin;
+    rippleOrigin.x = (rippleOrigin.x - 0.5) * aspectCorrection + 0.5;
+    vec2 rippleDelta = point - rippleOrigin;
     float rippleDistance = length(rippleDelta);
     float ripple = sin(rippleDistance * 58.0 - uRippleAge * 7.0);
     ripple *= exp(-rippleDistance * 5.5) * exp(-uRippleAge * 1.65) * uRippleEnergy;
@@ -133,16 +145,9 @@ class ContactSculptureRenderer {
   private disposed = false;
   private frameCount = 0;
   private frameTimeTotal = 0;
-  private pointer: [number, number] = [0.5, 0.5];
-  private pointerStrength = 0;
-  private pointerTarget: [number, number] = [0.5, 0.5];
-  private pointerTargetStrength = 0;
-  private pressed = false;
+  private readonly interaction = new ContactSculptureInteraction();
   private qualityCooldown = 0;
   private qualityIndex = 0;
-  private rippleAge = 100;
-  private rippleEnergy = 0;
-  private rippleOrigin: [number, number] = [0.5, 0.5];
 
   constructor(
     private readonly root: HTMLElement,
@@ -167,11 +172,11 @@ class ContactSculptureRenderer {
       transparent: true,
       uniforms: {
         uAspect: { value: 1 },
-        uPointer: { value: this.pointer },
+        uPointer: { value: this.interaction.snapshot().pointer },
         uPointerStrength: { value: 0 },
-        uRippleAge: { value: this.rippleAge },
+        uRippleAge: { value: this.interaction.snapshot().rippleAge },
         uRippleEnergy: { value: 0 },
-        uRippleOrigin: { value: this.rippleOrigin },
+        uRippleOrigin: { value: this.interaction.snapshot().rippleOrigin },
         uStrandDensity: { value: quality.strandDensity },
         uTime: { value: 0 },
       },
@@ -189,7 +194,7 @@ class ContactSculptureRenderer {
   }
 
   clearPointer() {
-    this.pointerTargetStrength = 0;
+    this.interaction.leave();
   }
 
   dispose() {
@@ -200,40 +205,26 @@ class ContactSculptureRenderer {
   }
 
   cancelPress() {
-    this.pressed = false;
-    this.pointerTargetStrength = 0;
+    this.interaction.cancelPress();
   }
 
-  press(point: [number, number]) {
-    this.pressed = true;
-    this.pointerTarget = point;
-    this.pointerTargetStrength = 1.65;
+  press(point: ContactSculpturePoint) {
+    this.interaction.press(point);
   }
 
-  release(point: [number, number]) {
-    this.pressed = false;
-    this.pointerTarget = point;
-    this.pointerTargetStrength = 1;
-    this.rippleOrigin = point;
-    this.rippleAge = 0;
-    this.rippleEnergy = Math.min(this.rippleEnergy * 0.52 + 0.62, 1);
+  release(point: ContactSculpturePoint) {
+    this.interaction.release(point);
   }
 
   render(time: number, frameDuration: number) {
     if (this.disposed) return false;
-    const pointerEase = 1 - Math.exp(-frameDuration / 85);
-    const releaseEase = 1 - Math.exp(-frameDuration / 150);
-    this.pointer[0] += (this.pointerTarget[0] - this.pointer[0]) * pointerEase;
-    this.pointer[1] += (this.pointerTarget[1] - this.pointer[1]) * pointerEase;
-    this.pointerStrength += (this.pointerTargetStrength - this.pointerStrength) * releaseEase;
-    this.rippleAge += frameDuration / 1000;
-    this.rippleEnergy *= Math.exp(-frameDuration / 1450);
+    const interaction = this.interaction.advance(frameDuration);
 
-    this.program.uniforms.uPointer.value = this.pointer;
-    this.program.uniforms.uPointerStrength.value = this.pointerStrength;
-    this.program.uniforms.uRippleAge.value = this.rippleAge;
-    this.program.uniforms.uRippleEnergy.value = this.rippleEnergy;
-    this.program.uniforms.uRippleOrigin.value = this.rippleOrigin;
+    this.program.uniforms.uPointer.value = interaction.pointer;
+    this.program.uniforms.uPointerStrength.value = interaction.pointerStrength;
+    this.program.uniforms.uRippleAge.value = interaction.rippleAge;
+    this.program.uniforms.uRippleEnergy.value = interaction.rippleEnergy;
+    this.program.uniforms.uRippleOrigin.value = interaction.rippleOrigin;
     this.program.uniforms.uTime.value = time / 1000;
     this.renderer.render({ clear: true, scene: this.mesh });
     return this.adaptQuality(frameDuration);
@@ -249,9 +240,8 @@ class ContactSculptureRenderer {
     this.program.uniforms.uAspect.value = width / height;
   }
 
-  setPointer(point: [number, number]) {
-    this.pointerTarget = point;
-    this.pointerTargetStrength = this.pressed ? 1.65 : 1;
+  setPointer(point: ContactSculpturePoint) {
+    this.interaction.hover(point);
   }
 
   private adaptQuality(frameDuration: number) {
@@ -295,6 +285,7 @@ export const mountContactSculpture = (root: HTMLElement) => {
   const controller = new AbortController();
   const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY);
   const supportedDesktop = window.matchMedia(SUPPORTED_DESKTOP_QUERY);
+  let detachInteraction: (() => void) | undefined;
   let disposed = false;
   let engine: ContactSculptureRenderer | undefined;
   let failed = false;
@@ -303,7 +294,6 @@ export const mountContactSculpture = (root: HTMLElement) => {
   let isDocumentVisible = document.visibilityState === 'visible';
   let isNearViewport = false;
   let lastFrameTime = 0;
-  let pressedPoint: [number, number] | undefined;
 
   const setState = (state: ContactSculptureState) => {
     root.dataset.contactSculptureState = state;
@@ -315,8 +305,19 @@ export const mountContactSculpture = (root: HTMLElement) => {
     lastFrameTime = 0;
   };
 
+  const deactivateInteraction = () => {
+    detachInteraction?.();
+    detachInteraction = undefined;
+  };
+
+  const activateInteraction = () => {
+    if (detachInteraction || !engine || root.dataset.contactSculptureState !== 'live') return;
+    detachInteraction = attachContactSculptureInteraction(root, interactionArea, engine);
+  };
+
   const stop = (state: Extract<ContactSculptureState, 'fallback' | 'static'>) => {
     cancelLoop();
+    deactivateInteraction();
     engine?.dispose();
     engine = undefined;
     hasRendered = false;
@@ -355,6 +356,7 @@ export const mountContactSculpture = (root: HTMLElement) => {
       hasRendered = true;
       setState('live');
     }
+    activateInteraction();
     frame = requestAnimationFrame(tick);
   };
 
@@ -385,11 +387,13 @@ export const mountContactSculpture = (root: HTMLElement) => {
       return;
     }
     if (failed) {
+      deactivateInteraction();
       setState('fallback');
       return;
     }
     if (!isDocumentVisible || !isNearViewport) {
       cancelLoop();
+      deactivateInteraction();
       setState(hasRendered ? 'paused' : 'poster');
       return;
     }
@@ -397,47 +401,6 @@ export const mountContactSculpture = (root: HTMLElement) => {
     if (engine && frame === undefined) frame = requestAnimationFrame(tick);
   };
 
-  const pointWithinSculpture = (event: PointerEvent) => {
-    const bounds = root.getBoundingClientRect();
-    if (
-      bounds.width <= 0 ||
-      bounds.height <= 0 ||
-      event.clientX < bounds.left ||
-      event.clientX > bounds.right ||
-      event.clientY < bounds.top ||
-      event.clientY > bounds.bottom
-    ) {
-      return;
-    }
-    return [
-      (event.clientX - bounds.left) / bounds.width,
-      1 - (event.clientY - bounds.top) / bounds.height,
-    ] as [number, number];
-  };
-
-  const handlePointerMove = (event: PointerEvent) => {
-    if (event.pointerType === 'touch' || reducedMotion.matches || !supportedDesktop.matches) return;
-    const point = pointWithinSculpture(event);
-    if (point) engine?.setPointer(point);
-    else engine?.clearPointer();
-  };
-  const handlePointerDown = (event: PointerEvent) => {
-    if (event.button !== 0 || event.pointerType === 'touch' || reducedMotion.matches) return;
-    const point = pointWithinSculpture(event);
-    if (!point) return;
-    pressedPoint = point;
-    engine?.press(point);
-  };
-  const handlePointerUp = (event: PointerEvent) => {
-    if (event.pointerType === 'touch' || !pressedPoint) return;
-    const releasePoint = pointWithinSculpture(event) ?? pressedPoint;
-    pressedPoint = undefined;
-    engine?.release(releasePoint);
-  };
-  const handlePointerCancel = () => {
-    pressedPoint = undefined;
-    engine?.cancelPress();
-  };
   const handleContextLost = (event: Event) => {
     event.preventDefault();
     failOpen();
@@ -473,26 +436,6 @@ export const mountContactSculpture = (root: HTMLElement) => {
 
   reducedMotion.addEventListener('change', handleEligibilityChange, { signal: controller.signal });
   supportedDesktop.addEventListener('change', handleEligibilityChange, {
-    signal: controller.signal,
-  });
-  interactionArea.addEventListener('pointerdown', handlePointerDown, {
-    passive: true,
-    signal: controller.signal,
-  });
-  interactionArea.addEventListener('pointermove', handlePointerMove, {
-    passive: true,
-    signal: controller.signal,
-  });
-  window.addEventListener('pointerup', handlePointerUp, {
-    passive: true,
-    signal: controller.signal,
-  });
-  window.addEventListener('pointercancel', handlePointerCancel, {
-    passive: true,
-    signal: controller.signal,
-  });
-  interactionArea.addEventListener('pointerleave', () => engine?.clearPointer(), {
-    passive: true,
     signal: controller.signal,
   });
   canvas.addEventListener('webglcontextlost', handleContextLost, { signal: controller.signal });

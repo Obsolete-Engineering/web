@@ -276,22 +276,23 @@ export const displayFragment = `
     float latentStrength = 1.0 - 0.66 * uCeremonyIntensity;
     strength *= mix(latentStrength, 1.0, awakening);
     strength *= 1.0 + interaction * 1.15;
+    float trailAlpha = interaction * mix(0.12, 0.76, mark * keep);
+    float punctuationOrange = exp(-dot(impulseOffset, impulseOffset) / 0.0025);
+    punctuationOrange *= uCeremonyImpulse * mix(0.26, 0.72, mark * keep);
+    float orangeAmount = max(trailAlpha, punctuationOrange);
+    float graphiteOnlyMask = 1.0 - step(0.001, orangeAmount);
     float contrastWaveLift = mix(
       ${SYMBOL_CONTRAST_WAVE_PROFILE.mobileLift},
       ${SYMBOL_CONTRAST_WAVE_PROFILE.desktopLift},
       smoothstep(700.0, 900.0, uCssResolution.x)
     );
-    strength *= 1.0 + contrastWave * contrastWaveLift;
+    strength *= 1.0 + contrastWave * contrastWaveLift * graphiteOnlyMask;
 
     const vec3 paper = vec3(0.957, 0.945, 0.918);
     const vec3 graphite = vec3(0.37, 0.385, 0.39);
     const vec3 orange = vec3(1.0, 0.294, 0.122);
     vec3 color = mix(paper, graphite, clamp(strength, 0.0, 0.24));
-
-    float trailAlpha = interaction * mix(0.12, 0.76, mark * keep);
-    float punctuationOrange = exp(-dot(impulseOffset, impulseOffset) / 0.0025);
-    punctuationOrange *= uCeremonyImpulse * mix(0.26, 0.72, mark * keep);
-    color = mix(color, orange, max(trailAlpha, punctuationOrange));
+    color = mix(color, orange, orangeAmount);
 
     gl_FragColor = vec4(color, 1.0);
   }

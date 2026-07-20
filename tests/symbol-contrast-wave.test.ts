@@ -27,15 +27,22 @@ describe('symbol contrast wave profile', () => {
 
   test('modulates graphite strength without changing displacement or orange', () => {
     assert.match(displayFragment, /uniform float uContrastWavePhase/u);
-    assert.match(displayFragment, /strength \*= 1\.0 \+ contrastWave \* contrastWaveLift/u);
+    assert.match(
+      displayFragment,
+      /strength \*= 1\.0 \+ contrastWave \* contrastWaveLift \* graphiteOnlyMask/u,
+    );
     assert.match(displayFragment, /contrastWave \*= 1\.0 - step\([\s\S]+uContrastWavePhase/u);
 
+    const orangeAmount = displayFragment.indexOf(
+      'float orangeAmount = max(trailAlpha, punctuationOrange);',
+    );
     const contrastModulation = displayFragment.indexOf(
-      'strength *= 1.0 + contrastWave * contrastWaveLift;',
+      'strength *= 1.0 + contrastWave * contrastWaveLift * graphiteOnlyMask;',
     );
     const graphiteMix = displayFragment.indexOf('vec3 color = mix(paper, graphite');
     const orangeMix = displayFragment.indexOf('color = mix(color, orange');
-    assert.ok(contrastModulation > -1 && contrastModulation < graphiteMix);
+    assert.ok(orangeAmount > -1 && orangeAmount < contrastModulation);
+    assert.ok(contrastModulation < graphiteMix);
     assert.ok(graphiteMix < orangeMix);
     assert.doesNotMatch(displayFragment, /interactiveOffset[^;]*contrastWave/u);
   });

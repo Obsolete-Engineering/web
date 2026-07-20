@@ -386,6 +386,21 @@ const installContrastWaveTrace = (page: Page) =>
     }
   });
 
+const getContrastWavePhases = (page: Page) =>
+  page.evaluate(
+    () =>
+      (window as typeof window & { symbolContrastWavePhases: number[] }).symbolContrastWavePhases,
+  );
+
+const getLatestContrastWavePhase = (page: Page) =>
+  getContrastWavePhases(page).then((phases) => phases.at(-1) ?? 0);
+
+const clearContrastWavePhases = (page: Page) =>
+  page.evaluate(() => {
+    (window as typeof window & { symbolContrastWavePhases: number[] }).symbolContrastWavePhases =
+      [];
+  });
+
 test('preserves the approved proposition, actions, and stable masthead', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
@@ -1534,92 +1549,45 @@ test('preserves the contrast wave phase through resize and rendering pauses', as
   await page.goto('/');
   await expectLiveCanvas(page, false);
 
-  const initialPhases = await page.evaluate(
-    () =>
-      (window as typeof window & { symbolContrastWavePhases: number[] }).symbolContrastWavePhases,
-  );
-  expect(initialPhases[0]).toBeLessThan(0.01);
+  expect((await getContrastWavePhases(page))[0]).toBeLessThan(0.01);
   await settleHeroCeremony(page);
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          (
-            window as typeof window & { symbolContrastWavePhases: number[] }
-          ).symbolContrastWavePhases.at(-1) ?? 0,
-      ),
-    )
-    .toBeGreaterThan(0);
+  await expect.poll(() => getLatestContrastWavePhase(page)).toBeGreaterThan(0);
 
-  const beforeResize = await page.evaluate(
-    () =>
-      (
-        window as typeof window & { symbolContrastWavePhases: number[] }
-      ).symbolContrastWavePhases.at(-1) ?? 0,
-  );
+  const beforeResize = await getLatestContrastWavePhase(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(120);
-  const afterResize = await page.evaluate(
-    () =>
-      (
-        window as typeof window & { symbolContrastWavePhases: number[] }
-      ).symbolContrastWavePhases.at(-1) ?? 0,
-  );
+  const afterResize = await getLatestContrastWavePhase(page);
   expect(afterResize).toBeGreaterThan(beforeResize);
   expect(afterResize - beforeResize).toBeLessThan(0.05);
 
   await page.evaluate(() => window.scrollTo(0, window.innerHeight + 300));
   await page.waitForTimeout(180);
-  await page.evaluate(() => {
-    const state = window as typeof window & { symbolContrastWavePhases: number[] };
-    state.symbolContrastWavePhases = [];
-  });
+  const pausedOffscreen = await getLatestContrastWavePhase(page);
+  await clearContrastWavePhases(page);
   await page.waitForTimeout(220);
-  expect(
-    await page.evaluate(
-      () =>
-        (window as typeof window & { symbolContrastWavePhases: number[] }).symbolContrastWavePhases,
-    ),
-  ).toHaveLength(0);
+  expect(await getContrastWavePhases(page)).toHaveLength(0);
 
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          (
-            window as typeof window & { symbolContrastWavePhases: number[] }
-          ).symbolContrastWavePhases.at(-1) ?? 0,
-      ),
-    )
-    .toBeGreaterThan(afterResize);
+    .poll(() => getContrastWavePhases(page).then((phases) => phases.length))
+    .toBeGreaterThan(0);
+  const resumedOffscreen = (await getContrastWavePhases(page))[0];
+  expect(resumedOffscreen).toBeGreaterThanOrEqual(pausedOffscreen);
+  expect(resumedOffscreen - pausedOffscreen).toBeLessThan(0.01);
 
-  const beforeHidden = await page.evaluate(
-    () =>
-      (
-        window as typeof window & { symbolContrastWavePhases: number[] }
-      ).symbolContrastWavePhases.at(-1) ?? 0,
-  );
+  const pausedHidden = await getLatestContrastWavePhase(page);
   await page.evaluate(() => {
-    const state = window as typeof window & {
-      mockedVisibility: DocumentVisibilityState;
-      symbolContrastWavePhases: number[];
-    };
+    const state = window as typeof window & { mockedVisibility: DocumentVisibilityState };
     state.mockedVisibility = 'hidden';
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
       get: () => state.mockedVisibility,
     });
     document.dispatchEvent(new Event('visibilitychange'));
-    state.symbolContrastWavePhases = [];
   });
+  await clearContrastWavePhases(page);
   await page.waitForTimeout(220);
-  expect(
-    await page.evaluate(
-      () =>
-        (window as typeof window & { symbolContrastWavePhases: number[] }).symbolContrastWavePhases,
-    ),
-  ).toHaveLength(0);
+  expect(await getContrastWavePhases(page)).toHaveLength(0);
 
   await page.evaluate(() => {
     const state = window as typeof window & { mockedVisibility: DocumentVisibilityState };
@@ -1627,15 +1595,11 @@ test('preserves the contrast wave phase through resize and rendering pauses', as
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          (
-            window as typeof window & { symbolContrastWavePhases: number[] }
-          ).symbolContrastWavePhases.at(-1) ?? 0,
-      ),
-    )
-    .toBeGreaterThan(beforeHidden);
+    .poll(() => getContrastWavePhases(page).then((phases) => phases.length))
+    .toBeGreaterThan(0);
+  const resumedHidden = (await getContrastWavePhases(page))[0];
+  expect(resumedHidden).toBeGreaterThanOrEqual(pausedHidden);
+  expect(resumedHidden - pausedHidden).toBeLessThan(0.01);
 });
 
 test('pauses GPU draws after the hero leaves the viewport and while the document is hidden', async ({

@@ -5,12 +5,19 @@ import {
   ContactSculptureInteraction,
   type ContactSculpturePoint,
 } from './contact-sculpture-interaction';
+import {
+  CONTACT_TENSION_REVEAL_EVENT,
+  getContactTensionRevealProgress,
+  readContactTensionReveal,
+  settleContactTensionReveal,
+  type ContactTensionReveal,
+} from './contact-tension-reveal';
 
 export { ContactSculptureInteraction } from './contact-sculpture-interaction';
 
 export type ContactSculptureQualityName = 'balanced' | 'dense' | 'economy';
 
-type ContactSculptureState = 'fallback' | 'live' | 'paused' | 'poster' | 'static';
+type ContactSculptureState = 'fallback' | 'forming' | 'live' | 'paused' | 'poster' | 'static';
 
 type ContactSculptureQuality = {
   dprCap: number;
@@ -57,6 +64,7 @@ const contourFragment = `
   precision highp float;
 
   uniform float uAspect;
+  uniform float uFormationProgress;
   uniform vec2 uPointer;
   uniform float uPointerStrength;
   uniform float uRippleAge;
@@ -76,6 +84,11 @@ const contourFragment = `
     float aspectCorrection = clamp(uAspect / 1.16, 0.82, 1.24);
     point.x = (point.x - 0.5) * aspectCorrection + 0.5;
 
+    float formation = smoothstep(0.0, 1.0, uFormationProgress);
+    float looseness = 1.0 - formation;
+    point.x = 0.61 + (point.x - 0.61) / mix(0.46, 1.0, formation);
+    point.y = 0.51 + (point.y - 0.51) / mix(0.72, 1.0, formation);
+
     vec2 bodyPoint = vec2((point.x - 0.59) / 0.62, (point.y - 0.51) / 0.48);
     float edgeFold = 0.07 * sin(point.y * 8.0) + 0.025 * sin(point.y * 19.0);
     float silhouetteDistance = bodyPoint.x * bodyPoint.x + bodyPoint.y * bodyPoint.y;
@@ -85,12 +98,15 @@ const contourFragment = `
     float voidDistance = abs(point.y - 0.49);
     float voidBoundary = 0.455 - 1.1 * pow(voidDistance, 1.55);
     float openVoid = 1.0 - smoothstep(voidBoundary - 0.012, voidBoundary + 0.012, point.x);
+    openVoid *= smoothstep(0.18, 0.92, formation);
 
     float foldOne = gaussian(point.x - 0.61 - 0.035 * sin(point.y * 7.0), 0.055);
     float foldTwo = gaussian(point.x - 0.78 + 0.025 * sin(point.y * 5.0), 0.045);
     float tension = 0.052 * sin(point.x * 6.2 + point.y * 2.4);
     tension += 0.021 * sin(point.x * 13.0 - point.y * 4.2);
     tension += (foldOne * 0.028 - foldTwo * 0.022) * sin(point.y * 12.0);
+    tension += looseness * 0.085 * sin(point.y * 7.0 + point.x * 3.2);
+    tension += looseness * 0.035 * sin(point.y * 16.0 - point.x * 4.6);
     tension += 0.0024 * sin(uTime * 0.62 + point.x * 4.0 + point.y * 2.0);
 
     vec2 pointer = uPointer;
@@ -112,7 +128,7 @@ const contourFragment = `
     float strandPosition = (point.y + tension) * uStrandDensity;
     float strandDistance = abs(fract(strandPosition) - 0.5) / uStrandDensity;
     float strand = 1.0 - smoothstep(0.0008, 0.00235, strandDistance);
-    float foldInk = smoothstep(0.54, 0.95, foldOne + foldTwo) * 0.36;
+    float foldInk = smoothstep(0.54, 0.95, foldOne + foldTwo) * 0.36 * formation;
     float edgeSoftness = smoothstep(0.0, 0.075, silhouette);
     float alpha = max(strand, foldInk) * silhouette * edgeSoftness * (1.0 - openVoid);
     alpha *= 0.78 + 0.18 * sin(point.y * uStrandDensity * 0.43 + point.x * 3.0);
@@ -172,6 +188,7 @@ class ContactSculptureRenderer {
       transparent: true,
       uniforms: {
         uAspect: { value: 1 },
+        uFormationProgress: { value: 0 },
         uPointer: { value: this.interaction.snapshot().pointer },
         uPointerStrength: { value: 0 },
         uRippleAge: { value: this.interaction.snapshot().rippleAge },
@@ -216,10 +233,11 @@ class ContactSculptureRenderer {
     this.interaction.release(point);
   }
 
-  render(time: number, frameDuration: number) {
+  render(time: number, frameDuration: number, formationProgress: number) {
     if (this.disposed) return false;
     const interaction = this.interaction.advance(frameDuration);
 
+    this.program.uniforms.uFormationProgress.value = formationProgress;
     this.program.uniforms.uPointer.value = interaction.pointer;
     this.program.uniforms.uPointerStrength.value = interaction.pointerStrength;
     this.program.uniforms.uRippleAge.value = interaction.rippleAge;
@@ -280,7 +298,8 @@ class ContactSculptureRenderer {
 export const mountContactSculpture = (root: HTMLElement) => {
   const canvas = root.querySelector<HTMLCanvasElement>('[data-contact-sculpture-canvas]');
   const interactionArea = root.closest<HTMLElement>('[data-contact-upper-stage]');
-  if (!canvas || !interactionArea) return () => {};
+  const section = root.closest<HTMLElement>('[data-motion-section="contact"]');
+  if (!canvas || !interactionArea || !section) return () => {};
 
   const controller = new AbortController();
   const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY);
@@ -294,6 +313,7 @@ export const mountContactSculpture = (root: HTMLElement) => {
   let isDocumentVisible = document.visibilityState === 'visible';
   let isNearViewport = false;
   let lastFrameTime = 0;
+  let reveal = readContactTensionReveal(section);
 
   const setState = (state: ContactSculptureState) => {
     root.dataset.contactSculptureState = state;
@@ -329,6 +349,7 @@ export const mountContactSculpture = (root: HTMLElement) => {
 
   const failOpen = () => {
     failed = true;
+    if (reveal) settleContactTensionReveal(section);
     stop('fallback');
   };
 
@@ -347,16 +368,27 @@ export const mountContactSculpture = (root: HTMLElement) => {
     }
 
     const frameDuration = lastFrameTime === 0 ? 1000 / 60 : time - lastFrameTime;
+    const formationProgress =
+      section.dataset.contactTensionReveal === 'settled'
+        ? 1
+        : getContactTensionRevealProgress(reveal);
     lastFrameTime = time;
-    if (!engine.render(time, frameDuration)) {
+    if (!engine.render(time, frameDuration, formationProgress)) {
       failOpen();
       return;
     }
-    if (!hasRendered || root.dataset.contactSculptureState !== 'live') {
-      hasRendered = true;
+
+    hasRendered = true;
+    if (!reveal) {
+      setState('poster');
+    } else if (formationProgress < 1) {
+      deactivateInteraction();
+      setState('forming');
+    } else {
+      settleContactTensionReveal(section);
       setState('live');
+      activateInteraction();
     }
-    activateInteraction();
     frame = requestAnimationFrame(tick);
   };
 
@@ -383,6 +415,7 @@ export const mountContactSculpture = (root: HTMLElement) => {
     if (disposed) return;
     if (!supportedDesktop.matches || reducedMotion.matches) {
       failed = false;
+      if (reveal) settleContactTensionReveal(section);
       stop('static');
       return;
     }
@@ -394,7 +427,7 @@ export const mountContactSculpture = (root: HTMLElement) => {
     if (!isDocumentVisible || !isNearViewport) {
       cancelLoop();
       deactivateInteraction();
-      setState(hasRendered ? 'paused' : 'poster');
+      setState(hasRendered && reveal ? 'paused' : 'poster');
       return;
     }
     start();
@@ -413,6 +446,15 @@ export const mountContactSculpture = (root: HTMLElement) => {
   };
   const handleEligibilityChange = () => {
     failed = false;
+    sync();
+  };
+  const handleTensionReveal = (event: Event) => {
+    reveal =
+      (event as CustomEvent<ContactTensionReveal>).detail ?? readContactTensionReveal(section);
+    if (failed || !supportedDesktop.matches || reducedMotion.matches) {
+      settleContactTensionReveal(section);
+      return;
+    }
     sync();
   };
   const handleVisibility = () => {
@@ -434,6 +476,9 @@ export const mountContactSculpture = (root: HTMLElement) => {
   const resizeObserver = new ResizeObserver(() => engine?.resize());
   resizeObserver.observe(root);
 
+  section.addEventListener(CONTACT_TENSION_REVEAL_EVENT, handleTensionReveal, {
+    signal: controller.signal,
+  });
   reducedMotion.addEventListener('change', handleEligibilityChange, { signal: controller.signal });
   supportedDesktop.addEventListener('change', handleEligibilityChange, {
     signal: controller.signal,

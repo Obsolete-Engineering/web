@@ -6,6 +6,10 @@ import {
   ContactSculptureInteraction,
   decideContactSculptureQuality,
 } from '../src/scripts/contact-sculpture';
+import {
+  advanceContactTensionReveal,
+  getContactTensionRevealProgress,
+} from '../src/scripts/contact-tension-reveal';
 
 describe('contact sculpture interaction', () => {
   test('eases a shallow hover dent in and out', () => {
@@ -73,6 +77,23 @@ describe('contact sculpture interaction', () => {
 
     assert.equal(interaction.snapshot().rippleEnergy, 0);
     assert.equal(interaction.snapshot().pointerTargetStrength, 0);
+  });
+});
+
+describe('contact tension reveal', () => {
+  test('holds the loose form until the coordinated reveal begins', () => {
+    assert.equal(getContactTensionRevealProgress(), 0);
+    assert.equal(getContactTensionRevealProgress(advanceContactTensionReveal(undefined, 0)), 0);
+  });
+
+  test('advances monotonically as takeover and invitation progress settle', () => {
+    const forming = advanceContactTensionReveal(undefined, 0.5);
+    const scrolledAway = advanceContactTensionReveal(forming, 0.2);
+    const settled = advanceContactTensionReveal(scrolledAway, 1.4);
+
+    assert.equal(getContactTensionRevealProgress(forming), 0.5);
+    assert.equal(getContactTensionRevealProgress(scrolledAway), 0.5);
+    assert.equal(getContactTensionRevealProgress(settled), 1);
   });
 });
 

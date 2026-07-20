@@ -22,11 +22,48 @@ test('stages the invitation and live sculpture together on supported desktops', 
   const heading = contact.getByRole('heading', { level: 2, name: invitationTitle });
   const sculpture = getSculpture(page);
 
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'poster');
+  await expect(sculpture).not.toHaveAttribute('data-contact-sculpture-interactive', 'true');
+
   await contact.scrollIntoViewIfNeeded();
   await expect(heading).toBeVisible();
   await expect(sculpture).toBeVisible();
   await expect(sculpture).toHaveAttribute('aria-hidden', 'true');
+  await expect(contact).toHaveAttribute('data-contact-tension-reveal', 'forming');
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'forming');
+  await expect(sculpture).not.toHaveAttribute('data-contact-sculpture-interactive', 'true');
+  const formingProgress = Number(
+    await contact.getAttribute('data-contact-tension-reveal-progress'),
+  );
+  expect(formingProgress).toBeGreaterThanOrEqual(0);
+  expect(formingProgress).toBeLessThan(1);
+
+  const formingBounds = await sculpture.boundingBox();
+  expect(formingBounds).not.toBeNull();
+  if (formingBounds) {
+    await page.mouse.move(
+      formingBounds.x + formingBounds.width * 0.7,
+      formingBounds.y + formingBounds.height * 0.5,
+    );
+  }
+  await expect(sculpture).not.toHaveAttribute('data-contact-sculpture-input', /.+/u);
+
+  await expect(contact).toHaveAttribute('data-contact-tension-reveal', 'settled');
+  await expect(contact).toHaveAttribute('data-contact-tension-reveal-progress', '1');
+  const settledComposition = await contact.evaluate((section) => {
+    const takeover = section.querySelector<HTMLElement>('[data-motion="contact-takeover"]');
+    const title = section.querySelector<HTMLElement>('#contact-cta-title');
+    const transform = takeover ? getComputedStyle(takeover).transform : '';
+    const matrix = transform && transform !== 'none' ? new DOMMatrix(transform) : new DOMMatrix();
+    return {
+      copyOpacity: title ? Number(getComputedStyle(title).opacity) : 0,
+      takeoverScaleY: Math.hypot(matrix.c, matrix.d),
+    };
+  });
+  expect(settledComposition.copyOpacity).toBe(1);
+  expect(settledComposition.takeoverScaleY).toBeGreaterThan(0.99);
   await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'live');
+  await expect(sculpture).toHaveAttribute('data-contact-sculpture-interactive', 'true');
   await expect(sculpture.locator('[data-contact-sculpture-canvas]')).toBeVisible();
   await expect(sculpture.locator('svg')).toBeHidden();
   await expect(sculpture.locator('a, button, input, [tabindex]')).toHaveCount(0);
@@ -183,6 +220,7 @@ test('presents the sculpture as a static poster for reduced motion', async ({ pa
   await expect(sculpture).toBeVisible();
   await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'static');
   await expect(sculpture).not.toHaveAttribute('data-contact-sculpture-interactive', 'true');
+  await expect(getContactStage(page)).not.toHaveAttribute('data-contact-tension-reveal', /.+/u);
   await expect(sculpture.locator('svg')).toBeVisible();
   await expect(sculpture.locator('[data-contact-sculpture-canvas]')).toBeHidden();
   await expect(sculpture).toHaveCSS('animation-duration', '0s');
@@ -252,14 +290,17 @@ test('pauses the live sculpture offscreen and resumes it safely', async ({ page 
   const sculpture = getSculpture(page);
   await sculpture.scrollIntoViewIfNeeded();
   await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'live');
+  await expect(getContactStage(page)).toHaveAttribute('data-contact-tension-reveal', 'settled');
 
   await page.evaluate(() => window.scrollTo({ top: 0 }));
   await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'paused');
+  await expect(getContactStage(page)).toHaveAttribute('data-contact-tension-reveal', 'settled');
   await expect(sculpture).not.toHaveAttribute('data-contact-sculpture-interactive', 'true');
 
   await sculpture.evaluate((element) => element.scrollIntoView({ block: 'center' }));
   await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'live');
   await expect(sculpture).toHaveAttribute('data-contact-sculpture-interactive', 'true');
+  await expect(getContactStage(page)).toHaveAttribute('data-contact-tension-reveal', 'settled');
 });
 
 test('disposes the live sculpture before an Astro page swap', async ({ page }) => {
@@ -267,11 +308,17 @@ test('disposes the live sculpture before an Astro page swap', async ({ page }) =
   await page.goto('/');
 
   const sculpture = getSculpture(page);
+  const motionRoot = page.locator('[data-home-motion]');
+  const takeover = getContactStage(page).locator('[data-motion="contact-takeover"]');
   await sculpture.scrollIntoViewIfNeeded();
   await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'live');
+  await expect(motionRoot).toHaveAttribute('data-motion-ready', 'desktop');
+  await expect(takeover).toHaveAttribute('style', /transform/u);
 
   await page.evaluate(() => document.dispatchEvent(new Event('astro:before-swap')));
 
+  await expect(motionRoot).not.toHaveAttribute('data-motion-ready', /.+/u);
+  await expect(takeover).not.toHaveAttribute('style', /.+/u);
   await expect(sculpture).toHaveAttribute('data-contact-sculpture-state', 'static');
   await expect(sculpture).not.toHaveAttribute('data-contact-sculpture-interactive', 'true');
   await expect(sculpture).not.toHaveAttribute('data-contact-sculpture-input', /.+/u);

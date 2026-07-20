@@ -2,6 +2,8 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 
+import { updateContactTensionReveal } from './contact-tension-reveal';
+
 const DESKTOP_QUERY = '(min-width: 861px) and (hover: hover) and (pointer: fine)';
 const MOBILE_QUERY = '(max-width: 860px), (hover: none), (pointer: coarse)';
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
@@ -226,8 +228,16 @@ const setupContactTakeover = (root: HTMLElement, isDesktop: boolean, revealed: S
 
   if (!section || !layer || !content) return;
 
+  let copyProgress: number | undefined;
+  let takeoverProgress = 0;
+  const updateTensionReveal = () => {
+    if (copyProgress === undefined) return;
+    updateContactTensionReveal(section, Math.min(copyProgress, takeoverProgress));
+  };
+
   gsap.set(layer, { scaleY: 0, transformOrigin: 'bottom center' });
-  gsap.to(layer, {
+  let takeoverTween: gsap.core.Tween | undefined;
+  takeoverTween = gsap.to(layer, {
     ease: 'none',
     scaleY: 1,
     scrollTrigger: {
@@ -236,23 +246,43 @@ const setupContactTakeover = (root: HTMLElement, isDesktop: boolean, revealed: S
       start: isDesktop ? 'top 92%' : 'top 94%',
       trigger: section,
     },
+    onUpdate: () => {
+      takeoverProgress = takeoverTween?.progress() ?? takeoverProgress;
+      updateTensionReveal();
+    },
   });
 
   if (content.length > 0 && !revealed.has('contact-copy')) {
-    gsap.from(content, {
+    const duration = isDesktop ? 0.68 : 0.45;
+    const stagger = isDesktop ? 0.1 : 0.06;
+    let copyTween: gsap.core.Tween | undefined;
+
+    copyTween = gsap.from(content, {
       opacity: 0,
       clipPath: 'inset(0 0 100% 0)',
-      duration: isDesktop ? 0.68 : 0.45,
+      duration,
       ease: 'power3.out',
-      stagger: isDesktop ? 0.1 : 0.06,
+      stagger,
       y: isDesktop ? 26 : 14,
       scrollTrigger: {
         trigger: section,
         start: isDesktop ? 'top 66%' : 'top 78%',
         once: true,
-        onEnter: () => revealed.add('contact-copy'),
+        onEnter: () => {
+          revealed.add('contact-copy');
+          copyProgress = 0;
+          updateTensionReveal();
+        },
       },
-      onComplete: () => gsap.set(content, { clearProps: 'all' }),
+      onUpdate: () => {
+        copyProgress = copyTween?.progress() ?? copyProgress;
+        updateTensionReveal();
+      },
+      onComplete: () => {
+        copyProgress = 1;
+        updateTensionReveal();
+        gsap.set(content, { clearProps: 'all' });
+      },
     });
   }
 };

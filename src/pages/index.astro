@@ -25,11 +25,13 @@ import PricingEstimator from "../components/PricingEstimator.astro";
 
   const disposeHomeMotion = initHomeMotion();
   const disposePricingEstimator = initPricingEstimator();
+  const disposePageRuntime = () => {
+    disposeHomeMotion();
+    disposePricingEstimator();
+  };
 
+  document.addEventListener('astro:before-swap', disposePageRuntime, { once: true });
   window.addEventListener('pagehide', (event) => {
-    if (!event.persisted) {
-      disposeHomeMotion();
-      disposePricingEstimator();
-    }
+    if (!event.persisted) disposePageRuntime();
   });
 </script>

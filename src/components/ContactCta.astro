@@ -217,11 +217,14 @@ const contourStrands = Array.from({ length: 52 }, (_, index) => {
     width: 100%;
   }
 
+  .contact-cta__sculpture[data-contact-sculpture-state='forming'] svg,
   .contact-cta__sculpture[data-contact-sculpture-state='live'] svg,
   .contact-cta__sculpture[data-contact-sculpture-state='paused'] svg {
     visibility: hidden;
   }
 
+  .contact-cta__sculpture[data-contact-sculpture-state='forming']
+    .contact-cta__sculpture-canvas,
   .contact-cta__sculpture[data-contact-sculpture-state='live']
     .contact-cta__sculpture-canvas,
   .contact-cta__sculpture[data-contact-sculpture-state='paused']

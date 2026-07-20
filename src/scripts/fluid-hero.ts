@@ -10,6 +10,7 @@ import {
   pressureFragment,
 } from './fluid-shaders';
 import { createHeroCeremony, type HeroCeremonyFrame } from './hero-ceremony';
+import { advanceSymbolContrastWavePhase } from './symbol-contrast-wave';
 
 type QualityTier = {
   dprCap: number;
@@ -185,6 +186,7 @@ class FluidEngine {
   private readonly textureFormat: TextureFormat;
 
   private ceremonySettled = true;
+  private contrastWavePhase = 0;
   private disposed = false;
   private elapsedTime = Math.random() * 120;
   private frame: number | undefined;
@@ -334,6 +336,7 @@ class FluidEngine {
       uCeremonyIntensity: { value: 1 },
       uCeremonyOrigin: { value: [0.5, 0.5] },
       uCeremonyProgress: { value: 1 },
+      uContrastWavePhase: { value: this.contrastWavePhase },
       uCssResolution: { value: [1, 1] },
       uDye: { value: null },
       uDyeTexelSize: { value: [1, 1] },
@@ -520,7 +523,7 @@ class FluidEngine {
     }
   }
 
-  private step(delta: number, dissipationDelta: number) {
+  private step(delta: number, dissipationDelta: number, contrastWaveDelta: number) {
     const targets = this.targets;
     if (!targets) return;
     const velocityTexel = [1 / targets.velocity.read.width, 1 / targets.velocity.read.height];
@@ -528,6 +531,11 @@ class FluidEngine {
     const normalizedDelta = delta / MAX_DELTA_SECONDS;
     const normalizedDissipation = dissipationDelta / MAX_DELTA_SECONDS;
     this.elapsedTime += dissipationDelta;
+    this.contrastWavePhase = advanceSymbolContrastWavePhase(
+      this.contrastWavePhase,
+      contrastWaveDelta * 1000,
+      this.ceremonySettled,
+    );
     this.advancePointer(delta);
 
     const advection = this.passes.advection;
@@ -591,6 +599,7 @@ class FluidEngine {
     const display = this.passes.display;
     setUniform(display, 'uDye', targets.dye.read.texture);
     setUniform(display, 'uDyeTexelSize', dyeTexel);
+    setUniform(display, 'uContrastWavePhase', this.contrastWavePhase);
     setUniform(display, 'uTime', this.elapsedTime);
     setUniform(display, 'uVelocity', targets.velocity.read.texture);
     this.renderPass(display);
@@ -623,11 +632,12 @@ class FluidEngine {
   private readonly tick = (time: number) => {
     if (this.disposed) return;
     const frameDuration = this.lastFrameTime === 0 ? 16.7 : time - this.lastFrameTime;
-    const dissipationDelta = Math.min(Math.max(frameDuration / 1000, 0), 0.1);
+    const activeDelta = Math.max(frameDuration / 1000, 0);
+    const dissipationDelta = Math.min(activeDelta, 0.1);
     const simulationDelta = Math.min(dissipationDelta, MAX_DELTA_SECONDS);
     this.lastFrameTime = time;
     try {
-      this.step(simulationDelta, dissipationDelta);
+      this.step(simulationDelta, dissipationDelta, activeDelta);
       if (this.ceremonySettled) this.adaptQuality(frameDuration);
       if (this.warmupFrames < 3) {
         this.warmupFrames += 1;

@@ -351,6 +351,41 @@ const installDrawCounter = (page: Page) =>
     }
   });
 
+const installContrastWaveTrace = (page: Page) =>
+  page.addInitScript(() => {
+    const state = window as typeof window & { symbolContrastWavePhases: number[] };
+    const uniformNames = new WeakMap<WebGLUniformLocation, string>();
+    state.symbolContrastWavePhases = [];
+
+    for (const prototype of [WebGLRenderingContext.prototype, WebGL2RenderingContext.prototype]) {
+      const getUniformLocation = prototype.getUniformLocation;
+      const uniform1f = prototype.uniform1f;
+      Object.defineProperty(prototype, 'getUniformLocation', {
+        configurable: true,
+        value(this: WebGLRenderingContext, program: WebGLProgram, name: string) {
+          const location = Reflect.apply(getUniformLocation, this, [
+            program,
+            name,
+          ]) as WebGLUniformLocation | null;
+          if (location) uniformNames.set(location, name);
+          return location;
+        },
+      });
+      Object.defineProperty(prototype, 'uniform1f', {
+        configurable: true,
+        value(this: WebGLRenderingContext, location: WebGLUniformLocation | null, value: number) {
+          if (location && uniformNames.get(location) === 'uContrastWavePhase') {
+            state.symbolContrastWavePhases.push(value);
+            if (state.symbolContrastWavePhases.length > 240) {
+              state.symbolContrastWavePhases.shift();
+            }
+          }
+          return Reflect.apply(uniform1f, this, [location, value]);
+        },
+      });
+    }
+  });
+
 test('preserves the approved proposition, actions, and stable masthead', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
@@ -1491,6 +1526,116 @@ test('preserves touch scrolling and first-attempt action taps during the mobile 
     actionHero.getByRole('link', { name: 'Bring us an idea' }).tap(),
   ]);
   await actionView.context.close();
+});
+
+test('preserves the contrast wave phase through resize and rendering pauses', async ({ page }) => {
+  await installContrastWaveTrace(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await expectLiveCanvas(page, false);
+
+  const initialPhases = await page.evaluate(
+    () =>
+      (window as typeof window & { symbolContrastWavePhases: number[] }).symbolContrastWavePhases,
+  );
+  expect(initialPhases[0]).toBeLessThan(0.01);
+  await settleHeroCeremony(page);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & { symbolContrastWavePhases: number[] }
+          ).symbolContrastWavePhases.at(-1) ?? 0,
+      ),
+    )
+    .toBeGreaterThan(0);
+
+  const beforeResize = await page.evaluate(
+    () =>
+      (
+        window as typeof window & { symbolContrastWavePhases: number[] }
+      ).symbolContrastWavePhases.at(-1) ?? 0,
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(120);
+  const afterResize = await page.evaluate(
+    () =>
+      (
+        window as typeof window & { symbolContrastWavePhases: number[] }
+      ).symbolContrastWavePhases.at(-1) ?? 0,
+  );
+  expect(afterResize).toBeGreaterThan(beforeResize);
+  expect(afterResize - beforeResize).toBeLessThan(0.05);
+
+  await page.evaluate(() => window.scrollTo(0, window.innerHeight + 300));
+  await page.waitForTimeout(180);
+  await page.evaluate(() => {
+    const state = window as typeof window & { symbolContrastWavePhases: number[] };
+    state.symbolContrastWavePhases = [];
+  });
+  await page.waitForTimeout(220);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { symbolContrastWavePhases: number[] }).symbolContrastWavePhases,
+    ),
+  ).toHaveLength(0);
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & { symbolContrastWavePhases: number[] }
+          ).symbolContrastWavePhases.at(-1) ?? 0,
+      ),
+    )
+    .toBeGreaterThan(afterResize);
+
+  const beforeHidden = await page.evaluate(
+    () =>
+      (
+        window as typeof window & { symbolContrastWavePhases: number[] }
+      ).symbolContrastWavePhases.at(-1) ?? 0,
+  );
+  await page.evaluate(() => {
+    const state = window as typeof window & {
+      mockedVisibility: DocumentVisibilityState;
+      symbolContrastWavePhases: number[];
+    };
+    state.mockedVisibility = 'hidden';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => state.mockedVisibility,
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+    state.symbolContrastWavePhases = [];
+  });
+  await page.waitForTimeout(220);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { symbolContrastWavePhases: number[] }).symbolContrastWavePhases,
+    ),
+  ).toHaveLength(0);
+
+  await page.evaluate(() => {
+    const state = window as typeof window & { mockedVisibility: DocumentVisibilityState };
+    state.mockedVisibility = 'visible';
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as typeof window & { symbolContrastWavePhases: number[] }
+          ).symbolContrastWavePhases.at(-1) ?? 0,
+      ),
+    )
+    .toBeGreaterThan(beforeHidden);
 });
 
 test('pauses GPU draws after the hero leaves the viewport and while the document is hidden', async ({

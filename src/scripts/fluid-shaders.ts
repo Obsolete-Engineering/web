@@ -1,3 +1,5 @@
+import { SYMBOL_CONTRAST_WAVE_PROFILE } from './symbol-contrast-wave';
+
 /* glsl */
 export const fullscreenVertex = `
   precision highp float;
@@ -121,6 +123,7 @@ export const displayFragment = `
   uniform float uCeremonyImpulse;
   uniform float uCeremonyIntensity;
   uniform float uCeremonyProgress;
+  uniform float uContrastWavePhase;
   uniform float uQuietPointerStrength;
   uniform float uTime;
 
@@ -228,6 +231,36 @@ export const displayFragment = `
     wave += cos((field.x + field.y) * 3.4 + slowTime * 0.29) * 0.46;
     wave = wave / 2.18 * 0.5 + 0.5;
 
+    float contrastWaveTravel = min(
+      uContrastWavePhase / ${SYMBOL_CONTRAST_WAVE_PROFILE.travelFraction},
+      1.0
+    );
+    float contrastWaveCurveEnvelope = sin(3.14159265 * contrastWaveTravel);
+    float contrastWaveCurve = (
+      sin(vUv.y * 6.2831853 + uContrastWavePhase * 6.2831853) * 0.018 +
+      sin(vUv.y * 12.566371 - uContrastWavePhase * 4.3982297) * 0.008
+    ) * contrastWaveCurveEnvelope;
+    float contrastWaveCenter = mix(
+      -${SYMBOL_CONTRAST_WAVE_PROFILE.coreWidth / 2 + SYMBOL_CONTRAST_WAVE_PROFILE.leadingEdgeWidth},
+      ${1 + SYMBOL_CONTRAST_WAVE_PROFILE.coreWidth / 2 + SYMBOL_CONTRAST_WAVE_PROFILE.trailingEdgeWidth},
+      contrastWaveTravel
+    );
+    float contrastWaveOffset = vUv.x - (contrastWaveCenter + contrastWaveCurve);
+    float contrastWave = smoothstep(
+      -${SYMBOL_CONTRAST_WAVE_PROFILE.coreWidth / 2 + SYMBOL_CONTRAST_WAVE_PROFILE.trailingEdgeWidth},
+      -${SYMBOL_CONTRAST_WAVE_PROFILE.coreWidth / 2},
+      contrastWaveOffset
+    );
+    contrastWave *= 1.0 - smoothstep(
+      ${SYMBOL_CONTRAST_WAVE_PROFILE.coreWidth / 2},
+      ${SYMBOL_CONTRAST_WAVE_PROFILE.coreWidth / 2 + SYMBOL_CONTRAST_WAVE_PROFILE.leadingEdgeWidth},
+      contrastWaveOffset
+    );
+    contrastWave *= 1.0 - step(
+      ${SYMBOL_CONTRAST_WAVE_PROFILE.travelFraction},
+      uContrastWavePhase
+    );
+
     float cellSize = mix(7.2, 8.2, smoothstep(700.0, 1400.0, uCssResolution.x));
     float mark = symbol(warpedPixel, cellSize);
     float restingDensity = mix(0.42, 0.88, smoothstep(0.16, 0.86, wave));
@@ -243,6 +276,12 @@ export const displayFragment = `
     float latentStrength = 1.0 - 0.66 * uCeremonyIntensity;
     strength *= mix(latentStrength, 1.0, awakening);
     strength *= 1.0 + interaction * 1.15;
+    float contrastWaveLift = mix(
+      ${SYMBOL_CONTRAST_WAVE_PROFILE.mobileLift},
+      ${SYMBOL_CONTRAST_WAVE_PROFILE.desktopLift},
+      smoothstep(700.0, 900.0, uCssResolution.x)
+    );
+    strength *= 1.0 + contrastWave * contrastWaveLift;
 
     const vec3 paper = vec3(0.957, 0.945, 0.918);
     const vec3 graphite = vec3(0.37, 0.385, 0.39);

@@ -42,6 +42,7 @@ describe('symbol contrast wave profile', () => {
     const graphiteMix = displayFragment.indexOf('vec3 color = mix(paper, graphite');
     const orangeMix = displayFragment.indexOf('color = mix(color, orange');
     assert.ok(orangeAmount > -1 && orangeAmount < contrastModulation);
+    assert.match(displayFragment, /graphiteOnlyMask = orangeAmount > 0\.0 \? 0\.0 : 1\.0/u);
     assert.ok(contrastModulation < graphiteMix);
     assert.ok(graphiteMix < orangeMix);
     assert.doesNotMatch(displayFragment, /interactiveOffset[^;]*contrastWave/u);

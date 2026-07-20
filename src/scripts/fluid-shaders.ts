@@ -280,7 +280,7 @@ export const displayFragment = `
     float punctuationOrange = exp(-dot(impulseOffset, impulseOffset) / 0.0025);
     punctuationOrange *= uCeremonyImpulse * mix(0.26, 0.72, mark * keep);
     float orangeAmount = max(trailAlpha, punctuationOrange);
-    float graphiteOnlyMask = 1.0 - step(0.001, orangeAmount);
+    float graphiteOnlyMask = orangeAmount > 0.0 ? 0.0 : 1.0;
     float contrastWaveLift = mix(
       ${SYMBOL_CONTRAST_WAVE_PROFILE.mobileLift},
       ${SYMBOL_CONTRAST_WAVE_PROFILE.desktopLift},

@@ -22,6 +22,7 @@ describe('symbol contrast wave profile', () => {
     assert.ok(profile.trailingEdgeWidth / profile.leadingEdgeWidth <= 1.2);
     assert.ok(profile.desktopLift >= 0.2 && profile.desktopLift <= 0.25);
     assert.ok(profile.mobileLift >= 0.15 && profile.mobileLift <= 0.2);
+    assert.equal(profile.perceptualGain, 2);
     assert.ok(profile.travelFraction < 1, 'the cycle includes full baseline recovery');
   });
 
@@ -29,7 +30,7 @@ describe('symbol contrast wave profile', () => {
     assert.match(displayFragment, /uniform float uContrastWavePhase/u);
     assert.match(
       displayFragment,
-      /strength \*= 1\.0 \+ contrastWave \* contrastWaveLift \* graphiteOnlyMask/u,
+      /strength \*= 1\.0 \+ contrastWave \* contrastWaveGain \* graphiteOnlyMask/u,
     );
     assert.match(displayFragment, /contrastWave \*= 1\.0 - step\([\s\S]+uContrastWavePhase/u);
 
@@ -37,12 +38,13 @@ describe('symbol contrast wave profile', () => {
       'float orangeAmount = max(trailAlpha, punctuationOrange);',
     );
     const contrastModulation = displayFragment.indexOf(
-      'strength *= 1.0 + contrastWave * contrastWaveLift * graphiteOnlyMask;',
+      'strength *= 1.0 + contrastWave * contrastWaveGain * graphiteOnlyMask;',
     );
     const graphiteMix = displayFragment.indexOf('vec3 color = mix(paper, graphite');
     const orangeMix = displayFragment.indexOf('color = mix(color, orange');
     assert.ok(orangeAmount > -1 && orangeAmount < contrastModulation);
     assert.match(displayFragment, /graphiteOnlyMask = orangeAmount > 0\.0 \? 0\.0 : 1\.0/u);
+    assert.match(displayFragment, /contrastWaveGain = contrastWaveLift \* 2/u);
     assert.ok(contrastModulation < graphiteMix);
     assert.ok(graphiteMix < orangeMix);
     assert.doesNotMatch(displayFragment, /interactiveOffset[^;]*contrastWave/u);

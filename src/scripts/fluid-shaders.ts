@@ -286,7 +286,8 @@ export const displayFragment = `
       ${SYMBOL_CONTRAST_WAVE_PROFILE.desktopLift},
       smoothstep(700.0, 900.0, uCssResolution.x)
     );
-    strength *= 1.0 + contrastWave * contrastWaveLift * graphiteOnlyMask;
+    float contrastWaveGain = contrastWaveLift * ${SYMBOL_CONTRAST_WAVE_PROFILE.perceptualGain.toFixed(1)};
+    strength *= 1.0 + contrastWave * contrastWaveGain * graphiteOnlyMask;
 
     const vec3 paper = vec3(0.957, 0.945, 0.918);
     const vec3 graphite = vec3(0.37, 0.385, 0.39);

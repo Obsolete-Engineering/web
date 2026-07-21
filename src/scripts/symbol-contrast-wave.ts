@@ -5,6 +5,7 @@ export const SYMBOL_CONTRAST_WAVE_PROFILE = {
   envelopeWidth: 0.38,
   leadingEdgeWidth: 0.12,
   mobileLift: 0.175,
+  perceptualGain: 2,
   trailingEdgeWidth: 0.14,
   travelFraction: 0.88,
 } as const;

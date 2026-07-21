@@ -88,6 +88,10 @@ _Avoid_: Project glimpse, background photography, persistent image overlay
 A dense edge-to-edge field of tiny graphite checker, cross, and four-point marks on warm paper. Broad low-contrast density bands and gentle displacement keep it atmospheric without competing with the headline.
 _Avoid_: Blank paper, sparse particles, branded icons, coarse pixels, neon field
 
+**Symbol contrast wave**:
+A subtle, continuous graphite-only tonal wave whose broad, softly curved front travels left to right through the warm-paper symbol field. Each passage deepens the field’s existing contrast proportionally before a longer soft recovery, without contributing displacement or changing existing motion and interaction.
+_Avoid_: Overlay sweep, symbol movement caused by the wave, brightness flash, hard-edged band, diagonal sweep
+
 **Fluid trail**:
 A connected velocity-driven wake that bends nearby symbols and temporarily turns them orange along an eased pointer path, then dissipates without a visible reset.
 _Avoid_: Full-height pointer wipe, persistent paint stroke, cursor spotlight, solid high-contrast ribbon

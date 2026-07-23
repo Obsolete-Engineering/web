@@ -72,68 +72,94 @@ const setupLenis = () => {
   };
 };
 
-const setupFeaturedWork = (root: HTMLElement, isDesktop: boolean, revealed: Set<string>) => {
-  const section = select<HTMLElement>(root, '[data-motion-section="featured-work"]');
-  if (!section) return;
+const setupFeaturedCopyMotion = (
+  section: HTMLElement,
+  isDesktop: boolean,
+  revealed: Set<string>,
+  key: string,
+) => {
+  const targets = selectAll<HTMLElement>(section, '[data-motion="featured-copy"]');
+  if (targets.length === 0 || revealed.has(key)) return;
 
-  const textTargets = selectAll<HTMLElement>(section, '[data-motion="featured-copy"]');
+  gsap.from(targets, {
+    opacity: 0,
+    clipPath: 'inset(0 0 100% 0)',
+    duration: isDesktop ? 0.72 : 0.48,
+    ease: 'power3.out',
+    stagger: isDesktop ? 0.08 : 0.05,
+    y: isDesktop ? 28 : 16,
+    scrollTrigger: {
+      trigger: section,
+      start: isDesktop ? 'top 76%' : 'top 84%',
+      once: true,
+      onEnter: () => revealed.add(key),
+    },
+    onComplete: () => gsap.set(targets, { clearProps: 'all' }),
+  });
+};
+
+const setupFeaturedProofMotion = (
+  section: HTMLElement,
+  isDesktop: boolean,
+  revealed: Set<string>,
+  key: string,
+) => {
   const proof = select<HTMLElement>(section, '[data-motion="featured-proof"]');
   const picture = proof?.querySelector<HTMLElement>('picture');
   const image = proof?.querySelector<HTMLElement>('img');
+  if (!proof || !picture || !image || revealed.has(key)) return;
+
+  const timeline = gsap.timeline({
+    scrollTrigger: {
+      trigger: proof,
+      start: isDesktop ? 'top 82%' : 'top 88%',
+      once: true,
+      onEnter: () => revealed.add(key),
+    },
+    onComplete: () => gsap.set([picture, image], { clearProps: 'all' }),
+  });
+
+  timeline
+    .from(picture, {
+      clipPath: isDesktop ? 'inset(0 0 100% 0)' : 'inset(0 0 60% 0)',
+      duration: isDesktop ? 0.9 : 0.58,
+      ease: 'power3.inOut',
+    })
+    .from(image, { duration: isDesktop ? 1.05 : 0.65, ease: 'power3.out', scale: 1.055 }, 0);
+};
+
+const setupFeaturedLedgerMotion = (
+  section: HTMLElement,
+  isDesktop: boolean,
+  revealed: Set<string>,
+  key: string,
+) => {
   const ledger = select<HTMLElement>(section, '[data-motion="featured-ledger"]');
+  if (!ledger || revealed.has(key)) return;
 
-  if (textTargets.length > 0 && !revealed.has('featured-copy')) {
-    gsap.from(textTargets, {
-      opacity: 0,
-      clipPath: 'inset(0 0 100% 0)',
-      duration: isDesktop ? 0.72 : 0.48,
-      ease: 'power3.out',
-      stagger: isDesktop ? 0.08 : 0.05,
-      y: isDesktop ? 28 : 16,
-      scrollTrigger: {
-        trigger: section,
-        start: isDesktop ? 'top 76%' : 'top 84%',
-        once: true,
-        onEnter: () => revealed.add('featured-copy'),
-      },
-      onComplete: () => gsap.set(textTargets, { clearProps: 'all' }),
-    });
-  }
+  gsap.from(ledger, {
+    duration: 0.55,
+    ease: 'power2.out',
+    y: isDesktop ? 20 : 12,
+    scrollTrigger: {
+      trigger: ledger,
+      start: 'top 90%',
+      once: true,
+      onEnter: () => revealed.add(key),
+    },
+    onComplete: () => gsap.set(ledger, { clearProps: 'all' }),
+  });
+};
 
-  if (proof && picture && image && !revealed.has('featured-proof')) {
-    const proofTimeline = gsap.timeline({
-      scrollTrigger: {
-        trigger: proof,
-        start: isDesktop ? 'top 82%' : 'top 88%',
-        once: true,
-        onEnter: () => revealed.add('featured-proof'),
-      },
-      onComplete: () => gsap.set([picture, image], { clearProps: 'all' }),
-    });
+const setupFeaturedWork = (root: HTMLElement, isDesktop: boolean, revealed: Set<string>) => {
+  const sections = selectAll<HTMLElement>(root, '[data-motion-section="featured-work"]');
 
-    proofTimeline
-      .from(picture, {
-        clipPath: isDesktop ? 'inset(0 0 100% 0)' : 'inset(0 0 60% 0)',
-        duration: isDesktop ? 0.9 : 0.58,
-        ease: 'power3.inOut',
-      })
-      .from(image, { duration: isDesktop ? 1.05 : 0.65, ease: 'power3.out', scale: 1.055 }, 0);
-  }
-
-  if (ledger && !revealed.has('featured-ledger')) {
-    gsap.from(ledger, {
-      duration: 0.55,
-      ease: 'power2.out',
-      y: isDesktop ? 20 : 12,
-      scrollTrigger: {
-        trigger: ledger,
-        start: 'top 90%',
-        once: true,
-        onEnter: () => revealed.add('featured-ledger'),
-      },
-      onComplete: () => gsap.set(ledger, { clearProps: 'all' }),
-    });
-  }
+  sections.forEach((section, index) => {
+    const projectKey = section.dataset.motionProject ?? String(index);
+    setupFeaturedCopyMotion(section, isDesktop, revealed, `featured-copy-${projectKey}`);
+    setupFeaturedProofMotion(section, isDesktop, revealed, `featured-proof-${projectKey}`);
+    setupFeaturedLedgerMotion(section, isDesktop, revealed, `featured-ledger-${projectKey}`);
+  });
 };
 
 const setupAIProductDelivery = (root: HTMLElement, isDesktop: boolean, revealed: Set<string>) => {

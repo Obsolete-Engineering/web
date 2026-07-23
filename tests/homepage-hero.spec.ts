@@ -457,9 +457,11 @@ test('puts documented proof after the proposition and preserves the homepage ord
   await page.goto('/');
 
   const featuredWork = page.getByRole('region', { name: 'Craft Applied' });
+  const triggerDev = page.getByRole('region', { name: 'Trigger.dev' });
   const orderedSections = [
     getHero(page),
     featuredWork,
+    triggerDev,
     page.getByRole('region', { name: 'From first thought to finished thing.' }),
     page.getByRole('region', { name: 'AI should earn its place.' }),
     page.getByRole('region', { name: 'Project pricing estimator' }),
@@ -500,6 +502,21 @@ test('puts documented proof after the proposition and preserves the homepage ord
   await expect(
     featuredWork.getByRole('link', { name: 'Visit Craft Applied (external site)' }),
   ).toHaveAttribute('href', 'https://craftapplied.com');
+
+  await expect(
+    triggerDev.getByText('Complex infrastructure, made approachable.', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    triggerDev.getByText(/durable execution model.+clear product story/iu),
+  ).toBeVisible();
+  await expect(triggerDev.getByText(/Remix, React, Tailwind CSS/iu)).toBeVisible();
+  await expect(triggerDev.getByRole('link', { name: 'View case study' })).toHaveAttribute(
+    'href',
+    '/work/trigger-dev',
+  );
+  await expect(
+    triggerDev.getByRole('link', { name: 'Visit Trigger.dev (external site)' }),
+  ).toHaveAttribute('href', 'https://trigger.dev');
 });
 
 for (const viewport of viewports) {

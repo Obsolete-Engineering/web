@@ -1,87 +1,116 @@
 ---
 import { Image } from "astro:assets";
-import desktopImage from "../assets/img/craft-applied-desktop.jpg";
-import mobileImage from "../assets/img/craft-applied-mobile.jpg";
-import { featuredWorkCopy as project } from "../copy";
+import craftAppliedDesktopImage from "../assets/img/craft-applied-desktop.jpg";
+import craftAppliedMobileImage from "../assets/img/craft-applied-mobile.jpg";
+import triggerDevDesktopImage from "../assets/img/trigger-dev-desktop.jpg";
+import triggerDevMobileImage from "../assets/img/trigger-dev-mobile.jpg";
+import { featuredWorkCopy as projects } from "../copy";
+
+const projectImages = {
+    "craft-applied": {
+        desktop: craftAppliedDesktopImage,
+        mobile: craftAppliedMobileImage,
+        background: "#00853e",
+    },
+    "trigger-dev": {
+        desktop: triggerDevDesktopImage,
+        mobile: triggerDevMobileImage,
+        background: "#101114",
+    },
+} as const;
 ---
 
-<section class="featured-work" id="featured-work" aria-labelledby="featured-work-title" data-motion-section="featured-work">
-    <div class="featured-work__inner">
-        <header class="featured-work__rail" data-motion="featured-copy">
-            <div class="featured-work__eyebrow">
-                <span aria-hidden="true"></span>
-                <p>{project.eyebrow}</p>
-            </div>
-            <p class="featured-work__status">
-                <span class="featured-work__status-desktop">{project.status.desktop}</span>
-                <span class="featured-work__status-mobile">{project.status.mobile}</span>
-            </p>
-        </header>
+{projects.map((project, index) => {
+    const images = projectImages[project.id];
+    const titleId = `featured-work-title-${project.id}`;
 
-        <div class="featured-work__header">
-            <h2 id="featured-work-title" aria-label={project.title.accessible} data-motion="featured-copy">
-                <span aria-hidden="true">
-                    <span>{project.title.firstLine}</span><br class="featured-work__title-break" /><span>{project.title.secondLine}</span>
-                </span>
-            </h2>
-            <div class="featured-work__introduction" data-motion="featured-copy">
-                <p class="featured-work__statement">{project.statement}</p>
-                <p class="featured-work__summary">{project.summary}</p>
-            </div>
-        </div>
+    return (
+        <section
+            class="featured-work"
+            id={index === 0 ? "featured-work" : undefined}
+            aria-labelledby={titleId}
+            data-motion-section="featured-work"
+            data-motion-project={project.id}
+            style={`--featured-proof-background: ${images.background}`}
+        >
+            <div class="featured-work__inner">
+                <header class="featured-work__rail" data-motion="featured-copy">
+                    <div class="featured-work__eyebrow">
+                        <span aria-hidden="true"></span>
+                        <p>{project.eyebrow}</p>
+                    </div>
+                    <p class="featured-work__status">
+                        <span class="featured-work__status-desktop">{project.status.desktop}</span>
+                        <span class="featured-work__status-mobile">{project.status.mobile}</span>
+                    </p>
+                </header>
 
-        <figure class="featured-work__proof" data-motion="featured-proof">
-            <picture>
-                <source media="(max-width: 700px)" srcset={mobileImage.src} />
-                <Image
-                    src={desktopImage}
-                    alt={project.imageAlt}
-                    loading="lazy"
-                    decoding="async"
-                />
-            </picture>
-            <figcaption>
-                <span class="featured-work__caption-desktop">{project.captions.desktop}</span>
-                <span class="featured-work__caption-mobile">{project.captions.mobile}</span>
-                <span class="featured-work__caption-site">{project.captions.site}</span>
-                <span class="featured-work__caption-width">{project.captions.width}</span>
-            </figcaption>
-        </figure>
+                <div class="featured-work__header">
+                    <h2 id={titleId} aria-label={project.title.accessible} data-motion="featured-copy">
+                        <span aria-hidden="true">
+                            <span>{project.title.firstLine}</span><br class="featured-work__title-break" /><span>{project.title.secondLine}</span>
+                        </span>
+                    </h2>
+                    <div class="featured-work__introduction" data-motion="featured-copy">
+                        <p class="featured-work__statement">{project.statement}</p>
+                        <p class="featured-work__summary">{project.summary}</p>
+                    </div>
+                </div>
 
-        <div class="featured-work__ledger" data-motion="featured-ledger">
-            <dl class="featured-work__facts">
-                {project.facts.map((row) => (
-                    <div class="featured-work__facts-row">
-                        {row.map(([term, description]) => (
-                            <div class="featured-work__fact">
-                                <dt>{term}</dt>
-                                <dd>{description}</dd>
+                <figure class="featured-work__proof" data-motion="featured-proof">
+                    <picture>
+                        <source media="(max-width: 700px)" srcset={images.mobile.src} />
+                        <Image
+                            src={images.desktop}
+                            alt={project.imageAlt}
+                            loading="lazy"
+                            decoding="async"
+                        />
+                    </picture>
+                    <figcaption>
+                        <span class="featured-work__caption-desktop">{project.captions.desktop}</span>
+                        <span class="featured-work__caption-mobile">{project.captions.mobile}</span>
+                        <span class="featured-work__caption-site">{project.captions.site}</span>
+                        <span class="featured-work__caption-width">{project.captions.width}</span>
+                    </figcaption>
+                </figure>
+
+                <div class="featured-work__ledger" data-motion="featured-ledger">
+                    <dl class="featured-work__facts">
+                        {project.facts.map((row) => (
+                            <div class="featured-work__facts-row">
+                                {row.map(([term, description]) => (
+                                    <div class="featured-work__fact">
+                                        <dt>{term}</dt>
+                                        <dd>{description}</dd>
+                                    </div>
+                                ))}
                             </div>
                         ))}
-                    </div>
-                ))}
-            </dl>
+                    </dl>
 
-            <div class="featured-work__actions">
-                <a
-                    class="featured-work__cta featured-work__cta--primary"
-                    href={project.actions.primary.href}
-                >
-                    <span>{project.actions.primary.label}</span>
-                    <span aria-hidden="true">{project.actions.primary.suffix}</span>
-                </a>
-                <a
-                    class="featured-work__cta featured-work__cta--secondary"
-                    href={project.actions.secondary.href}
-                    aria-label={project.actions.secondary.ariaLabel}
-                >
-                    <span>{project.actions.secondary.label}</span>
-                    <span aria-hidden="true">{project.actions.secondary.suffix}</span>
-                </a>
+                    <div class="featured-work__actions">
+                        <a
+                            class="featured-work__cta featured-work__cta--primary"
+                            href={project.actions.primary.href}
+                        >
+                            <span>{project.actions.primary.label}</span>
+                            <span aria-hidden="true">{project.actions.primary.suffix}</span>
+                        </a>
+                        <a
+                            class="featured-work__cta featured-work__cta--secondary"
+                            href={project.actions.secondary.href}
+                            aria-label={project.actions.secondary.ariaLabel}
+                        >
+                            <span>{project.actions.secondary.label}</span>
+                            <span aria-hidden="true">{project.actions.secondary.suffix}</span>
+                        </a>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-</section>
+        </section>
+    );
+})}
 
 <style>
     .featured-work {
@@ -89,6 +118,10 @@ import { featuredWorkCopy as project } from "../copy";
         color: var(--color-primary);
         min-height: 1080px;
         padding: 64px 20px;
+    }
+
+    .featured-work + .featured-work {
+        border-top: 1px solid var(--color-line);
     }
 
     .featured-work__inner {
@@ -183,7 +216,7 @@ import { featuredWorkCopy as project } from "../copy";
     .featured-work__proof {
         align-self: center;
         aspect-ratio: 304 / 494;
-        background: #00853e;
+        background: var(--featured-proof-background);
         border: 1px solid var(--color-line);
         display: grid;
         grid-template-rows: minmax(0, 1fr) 24px;

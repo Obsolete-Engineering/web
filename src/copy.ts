@@ -30,16 +30,31 @@ export const workPageCopy = {
   title: 'Work worth spending time with.',
   introduction:
     'A closer look at how we turn complex ideas into clear, useful digital experiences.',
-  project: {
-    index: '01',
-    title: 'Craft Applied',
-    statement: 'A complex offer, made clear.',
-    summary:
-      'Strategy, UX/UI, content architecture, and engineering for a multidisciplinary digital studio.',
-    imageAlt: 'The Craft Applied homepage with cream typography on a deep green background.',
-    href: '/work/craft-applied',
-    action: 'Read case study',
-  },
+  projects: [
+    {
+      id: 'craft-applied',
+      index: '01',
+      title: 'Craft Applied',
+      statement: 'A complex offer, made clear.',
+      summary:
+        'Strategy, UX/UI, content architecture, and engineering for a multidisciplinary digital studio.',
+      imageAlt: 'The Craft Applied homepage with cream typography on a deep green background.',
+      href: '/work/craft-applied',
+      action: 'Read case study',
+    },
+    {
+      id: 'trigger-dev',
+      index: '02',
+      title: 'Trigger.dev',
+      statement: 'Complex infrastructure, made approachable.',
+      summary:
+        'Strategy, UX/UI, product storytelling, and engineering for an open-source background jobs platform.',
+      imageAlt:
+        'The Trigger.dev homepage with its AI agents and workflows message over a dark product interface.',
+      href: '/work/trigger-dev',
+      action: 'Read case study',
+    },
+  ],
 } as const;
 
 export const contactPageCopy = {
@@ -153,52 +168,102 @@ export const contactPageCopy = {
   },
 } as const;
 
-export const featuredWorkCopy = {
-  eyebrow: 'Featured work / 01',
-  status: {
-    desktop: 'Design + development / Live',
-    mobile: 'Live',
-  },
-  title: {
-    accessible: 'Craft Applied',
-    firstLine: 'Craft',
-    secondLine: ' Applied',
-  },
-  statement: 'A complex offer, made clear.',
-  summary:
-    'We organized six disciplines into a clear service model, then designed and engineered a live, content-rich website with reusable work and editorial publishing patterns and an accessible, responsive interface.',
-  imageAlt:
-    'The Craft Applied homepage, with cream typography on a deep green background describing its website and application work.',
-  captions: {
-    desktop: 'Live project view / Desktop',
-    mobile: 'Responsive proof',
-    site: 'craftapplied.com',
-    width: '390 px',
-  },
-  facts: [
-    [
-      ['Client', 'Craft Applied'],
-      ['Role', 'Design + development'],
-    ],
-    [
-      ['Focus', 'Strategy, UX/UI, content architecture, engineering'],
-      ['Platform', 'Astro, SolidJS, TailwindCSS, Plausible'],
-    ],
-  ],
-  actions: {
-    primary: {
-      label: 'View case study',
-      href: '/work/craft-applied',
-      suffix: '→',
+export const featuredWorkCopy = [
+  {
+    id: 'craft-applied',
+    eyebrow: 'Featured work / 01',
+    status: {
+      desktop: 'Design + development / Live',
+      mobile: 'Live',
     },
-    secondary: {
-      label: 'Visit live site',
-      ariaLabel: 'Visit Craft Applied (external site)',
-      href: 'https://craftapplied.com',
-      suffix: '↗',
+    title: {
+      accessible: 'Craft Applied',
+      firstLine: 'Craft',
+      secondLine: ' Applied',
+    },
+    statement: 'A complex offer, made clear.',
+    summary:
+      'We organized six disciplines into a clear service model, then designed and engineered a live, content-rich website with reusable work and editorial publishing patterns and an accessible, responsive interface.',
+    imageAlt:
+      'The Craft Applied homepage, with cream typography on a deep green background describing its website and application work.',
+    captions: {
+      desktop: 'Live project view / Desktop',
+      mobile: 'Responsive proof',
+      site: 'craftapplied.com',
+      width: '390 px',
+    },
+    facts: [
+      [
+        ['Client', 'Craft Applied'],
+        ['Role', 'Design + development'],
+      ],
+      [
+        ['Focus', 'Strategy, UX/UI, content architecture, engineering'],
+        ['Platform', 'Astro, SolidJS, TailwindCSS, Plausible'],
+      ],
+    ],
+    actions: {
+      primary: {
+        label: 'View case study',
+        href: '/work/craft-applied',
+        suffix: '→',
+      },
+      secondary: {
+        label: 'Visit live site',
+        ariaLabel: 'Visit Craft Applied (external site)',
+        href: 'https://craftapplied.com',
+        suffix: '↗',
+      },
     },
   },
-} as const;
+  {
+    id: 'trigger-dev',
+    eyebrow: 'Featured work / 02',
+    status: {
+      desktop: 'Design + development / Live',
+      mobile: 'Live',
+    },
+    title: {
+      accessible: 'Trigger.dev',
+      firstLine: 'Trigger',
+      secondLine: '.dev',
+    },
+    statement: 'Complex infrastructure, made approachable.',
+    summary:
+      'We organized Trigger.dev’s durable execution model into a clear product story, then designed and engineered a responsive website with reusable capability, customer proof, and documentation pathways.',
+    imageAlt:
+      'The Trigger.dev homepage with its AI agents and workflows message over a dark product interface.',
+    captions: {
+      desktop: 'Live project view / Desktop',
+      mobile: 'Responsive proof',
+      site: 'trigger.dev',
+      width: '390 px',
+    },
+    facts: [
+      [
+        ['Client', 'Trigger.dev'],
+        ['Role', 'Design + development'],
+      ],
+      [
+        ['Focus', 'Strategy, UX/UI, product storytelling, engineering'],
+        ['Platform', 'Remix, React, Tailwind CSS'],
+      ],
+    ],
+    actions: {
+      primary: {
+        label: 'View case study',
+        href: '/work/trigger-dev',
+        suffix: '→',
+      },
+      secondary: {
+        label: 'Visit live site',
+        ariaLabel: 'Visit Trigger.dev (external site)',
+        href: 'https://trigger.dev',
+        suffix: '↗',
+      },
+    },
+  },
+] as const;
 
 const startConversationActionCopy = {
   label: 'Start a conversation',
@@ -376,6 +441,108 @@ export const craftAppliedCaseStudyCopy = {
     eyebrow: 'Have a complex story?',
     title: 'Let’s make it clear.',
     body: 'Bring us the offer, platform, or idea that has outgrown the way it is currently explained.',
+    action: {
+      label: 'Start a project',
+      href: '/contact#project-inquiry',
+      suffix: '↗',
+    },
+  },
+} as const;
+
+export const triggerDevCaseStudyCopy = {
+  metaTitle: 'Trigger.dev case study | Obsolete',
+  metaDescription:
+    'How Obsolete made Trigger.dev’s open-source background jobs platform clear, useful, and ready to explore.',
+  eyebrow: 'Case study / 02',
+  status: 'Design + development / Live',
+  title: 'Trigger.dev',
+  headline: 'Complex infrastructure, made approachable.',
+  introduction:
+    'Trigger.dev gives developers a durable way to build AI workflows and long-running background jobs in TypeScript. We created a digital experience that makes retries, queues, observability, and elastic scaling feel like one coherent product rather than a list of infrastructure concerns.',
+  imageAlt:
+    'The Trigger.dev homepage with its AI agents and workflows message over a dark product interface.',
+  facts: [
+    ['Client', 'Trigger.dev'],
+    ['Role', 'Design + development'],
+    ['Focus', 'Strategy, UX/UI, product storytelling, engineering'],
+    ['Platform', 'Remix, React, Tailwind CSS'],
+  ],
+  actions: {
+    live: {
+      label: 'Visit live site',
+      ariaLabel: 'Visit Trigger.dev (external site)',
+      href: 'https://trigger.dev',
+      suffix: '↗',
+    },
+    back: {
+      label: 'All work',
+      href: '/work',
+      suffix: '←',
+    },
+  },
+  challenge: {
+    index: '01',
+    eyebrow: 'The challenge',
+    title: 'Reliability was the product. Complexity could not be the story.',
+    body: 'Trigger.dev handles the infrastructure behind long-running work: queues, retries, concurrency, schedules, monitoring, and elastic compute. The experience needed to speak with technical precision without asking developers to decode the platform before seeing its value.',
+    principle: 'Make the hard engineering visible without making the product feel hard to use.',
+  },
+  system: {
+    index: '02',
+    eyebrow: 'The product system',
+    title: 'Six capabilities. One reliable runtime.',
+    body: 'We organized the product story around the jobs developers need the platform to do. Each capability has a distinct purpose, while the shared visual and editorial system shows how they work together as one durable execution layer.',
+    imageAlt:
+      'The Trigger.dev product page introducing reliable background jobs and a grid of platform features.',
+    disciplines: [
+      ['Long-running tasks', 'Durable execution without arbitrary serverless timeouts'],
+      ['Queues + concurrency', 'Control over workload priority, throughput, and limits'],
+      ['Automatic retries', 'Configurable recovery when tasks or dependencies fail'],
+      ['Observability', 'Run history, logs, traces, and monitoring in one interface'],
+      ['Realtime + streaming', 'Live task status and output for connected product experiences'],
+      ['Elastic scaling', 'Production workloads without managing the underlying servers'],
+    ],
+  },
+  proof: {
+    index: '03',
+    eyebrow: 'Production proof',
+    title: 'Let real workflows carry the argument.',
+    body: 'Customer stories connect the platform’s infrastructure claims to work running in production. They show durable tasks powering booking engines, AI products, logistics, procurement, and other systems where reliability is not an abstract feature.',
+    imageAlt: 'Trigger.dev customer stories featuring Cal.com, Tierly, GovSignals, and Pallet.',
+  },
+  editorial: {
+    index: '04',
+    eyebrow: 'Documentation',
+    title: 'The docs are part of the product.',
+    body: 'The path from promise to implementation stays direct. Quick starts, guides, examples, and framework-specific material continue the same clear hierarchy, helping developers move from understanding Trigger.dev to running a first task.',
+    imageAlt:
+      'The Trigger.dev documentation homepage with quick start, guides, AI building, and video walkthrough cards.',
+  },
+  accessibility: {
+    index: '05',
+    eyebrow: 'Responsive execution',
+    title: 'Dense information without a dense experience.',
+    body: 'Technical audiences scan before they commit. A strong hierarchy, focused calls to action, concise product language, and responsive layouts keep the experience understandable across devices without stripping away the detail developers need.',
+    imageAlt:
+      'The responsive Trigger.dev homepage showing its navigation, product message, and primary action on a mobile screen.',
+    details: ['Scannable hierarchy', 'Focused actions', 'Responsive by default'],
+  },
+  shipped: {
+    index: '06',
+    eyebrow: 'What shipped',
+    title: 'A product story built to grow with the platform.',
+    body: 'The result is a responsive product website with a clear capability model, reusable feature patterns, integrated customer proof, and direct routes into documentation, the cloud product, and the open-source codebase.',
+    items: [
+      ['Strategy', 'Product narrative and information architecture'],
+      ['Experience', 'Responsive UX/UI and interaction system'],
+      ['Engineering', 'Remix, React, and reusable marketing components'],
+      ['Content', 'Product, customer story, and documentation pathways'],
+    ],
+  },
+  cta: {
+    eyebrow: 'Building a technical product?',
+    title: 'Make the hard part easy to understand.',
+    body: 'Bring us the platform, workflow, or product that deserves a clearer way into its complexity.',
     action: {
       label: 'Start a project',
       href: '/contact#project-inquiry',

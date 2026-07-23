@@ -93,6 +93,24 @@ const expectFeaturedWork = async (page: Page) => {
   await expect(
     work.getByRole('link', { name: 'Visit Craft Applied (external site)' }),
   ).toHaveAttribute('href', 'https://craftapplied.com');
+
+  const triggerDev = page.getByRole('region', { name: 'Trigger.dev' });
+  await expect(
+    triggerDev.getByText('Complex infrastructure, made approachable.', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    triggerDev.getByText(/durable execution model.+clear product story/iu),
+  ).toBeVisible();
+  await expect(
+    triggerDev.getByRole('img', { name: /Trigger\.dev homepage.+AI agents and workflows/iu }),
+  ).toBeVisible();
+  await expect(triggerDev.getByRole('link', { name: 'View case study' })).toHaveAttribute(
+    'href',
+    '/work/trigger-dev',
+  );
+  await expect(
+    triggerDev.getByRole('link', { name: 'Visit Trigger.dev (external site)' }),
+  ).toHaveAttribute('href', 'https://trigger.dev');
 };
 
 const expectCompleteAiExplanation = async (page: Page) => {

@@ -1,0 +1,840 @@
+---
+import { Image } from 'astro:assets';
+import desktopImage from '../../assets/img/trigger-dev-desktop.jpg';
+import mobileImage from '../../assets/img/trigger-dev-mobile.jpg';
+import editorialImage from '../../assets/img/trigger-dev/docs.jpg';
+import servicesImage from '../../assets/img/trigger-dev/product.jpg';
+import workImage from '../../assets/img/trigger-dev/customers.jpg';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { triggerDevCaseStudyCopy as project } from '../../copy';
+---
+
+<BaseLayout
+  title={project.metaTitle}
+  description={project.metaDescription}
+  image={desktopImage.src}
+  imageAlt={project.imageAlt}
+  type="article"
+>
+  <article class="case-study">
+    <header class="case-study__hero">
+      <div class="case-study__inner">
+        <div class="case-study__rail">
+          <p class="case-study__eyebrow">
+            <span aria-hidden="true"></span>
+            {project.eyebrow}
+          </p>
+          <p>{project.status}</p>
+        </div>
+
+        <div class="case-study__heading">
+          <h1>{project.title}</h1>
+          <div class="case-study__opening">
+            <p class="case-study__headline">{project.headline}</p>
+            <p class="case-study__introduction">{project.introduction}</p>
+          </div>
+        </div>
+
+        <div class="case-study__ledger">
+          <dl class="case-study__facts">
+            {project.facts.map(([term, description]) => (
+              <div>
+                <dt>{term}</dt>
+                <dd>{description}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <nav class="case-study__actions" aria-label="Project actions">
+            <a href={project.actions.back.href}>
+              <span aria-hidden="true">{project.actions.back.suffix}</span>
+              {project.actions.back.label}
+            </a>
+            <a href={project.actions.live.href} aria-label={project.actions.live.ariaLabel}>
+              {project.actions.live.label}
+              <span aria-hidden="true">{project.actions.live.suffix}</span>
+            </a>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <figure class="case-study__hero-media">
+      <div class="case-study__hero-media-inner">
+        <Image
+          class="case-study__desktop-image"
+          src={desktopImage}
+          alt={project.imageAlt}
+          loading="eager"
+          decoding="async"
+        />
+        <Image
+          class="case-study__mobile-image"
+          src={mobileImage}
+          alt=""
+          loading="eager"
+          decoding="async"
+        />
+      </div>
+      <figcaption>
+        <span>Live project view / AI workflows</span>
+        <span>trigger.dev</span>
+      </figcaption>
+    </figure>
+
+    <section class="case-section case-section--challenge" aria-labelledby="challenge-title">
+      <div class="case-section__inner">
+        <header class="case-section__header">
+          <p class="case-section__label">
+            <span>{project.challenge.index}</span>
+            {project.challenge.eyebrow}
+          </p>
+          <h2 id="challenge-title">{project.challenge.title}</h2>
+          <p>{project.challenge.body}</p>
+        </header>
+
+        <p class="case-section__principle">{project.challenge.principle}</p>
+      </div>
+    </section>
+
+    <section class="case-section case-section--system" aria-labelledby="system-title">
+      <div class="case-section__inner">
+        <header class="case-section__header">
+          <p class="case-section__label">
+            <span>{project.system.index}</span>
+            {project.system.eyebrow}
+          </p>
+          <h2 id="system-title">{project.system.title}</h2>
+          <p>{project.system.body}</p>
+        </header>
+
+        <figure class="case-study__figure">
+          <Image
+            src={servicesImage}
+            alt={project.system.imageAlt}
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption>
+            <span>Product architecture / Six capabilities</span>
+            <span>Live interface</span>
+          </figcaption>
+        </figure>
+
+        <ol class="discipline-list">
+          {project.system.disciplines.map(([title, description], index) => (
+            <li>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <h3>{title}</h3>
+              <p>{description}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section class="case-section" aria-labelledby="proof-title">
+      <div class="case-section__inner">
+        <header class="case-section__header">
+          <p class="case-section__label">
+            <span>{project.proof.index}</span>
+            {project.proof.eyebrow}
+          </p>
+          <h2 id="proof-title">{project.proof.title}</h2>
+          <p>{project.proof.body}</p>
+        </header>
+
+        <figure class="case-study__figure">
+          <Image
+            src={workImage}
+            alt={project.proof.imageAlt}
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption>
+            <span>Customer stories / Workflows in production</span>
+            <span>Live interface</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="case-section case-section--editorial" aria-labelledby="editorial-title">
+      <div class="case-section__inner">
+        <header class="case-section__header">
+          <p class="case-section__label">
+            <span>{project.editorial.index}</span>
+            {project.editorial.eyebrow}
+          </p>
+          <h2 id="editorial-title">{project.editorial.title}</h2>
+          <p>{project.editorial.body}</p>
+        </header>
+
+        <figure class="case-study__figure">
+          <Image
+            src={editorialImage}
+            alt={project.editorial.imageAlt}
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption>
+            <span>Documentation / Guides + examples</span>
+            <span>Live interface</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="case-section case-section--accessibility" aria-labelledby="accessibility-title">
+      <div class="case-section__inner">
+        <header class="case-section__header">
+          <p class="case-section__label">
+            <span>{project.accessibility.index}</span>
+            {project.accessibility.eyebrow}
+          </p>
+          <h2 id="accessibility-title">{project.accessibility.title}</h2>
+          <p>{project.accessibility.body}</p>
+        </header>
+
+        <div class="accessibility-proof">
+          <figure>
+            <Image
+              src={mobileImage}
+              alt={project.accessibility.imageAlt}
+              loading="lazy"
+              decoding="async"
+            />
+            <figcaption>Responsive proof / 390 px</figcaption>
+          </figure>
+
+          <ul>
+            {project.accessibility.details.map((detail, index) => (
+              <li>
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                <p>{detail}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="case-section case-section--shipped" aria-labelledby="shipped-title">
+      <div class="case-section__inner">
+        <header class="case-section__header">
+          <p class="case-section__label">
+            <span>{project.shipped.index}</span>
+            {project.shipped.eyebrow}
+          </p>
+          <h2 id="shipped-title">{project.shipped.title}</h2>
+          <p>{project.shipped.body}</p>
+        </header>
+
+        <dl class="shipped-list">
+          {project.shipped.items.map(([term, description]) => (
+            <div>
+              <dt>{term}</dt>
+              <dd>{description}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+
+    <section class="case-study__cta" aria-labelledby="case-study-cta-title">
+      <div class="case-study__inner">
+        <p class="case-study__cta-eyebrow">
+          <span aria-hidden="true"></span>
+          {project.cta.eyebrow}
+        </p>
+        <h2 id="case-study-cta-title">{project.cta.title}</h2>
+        <div class="case-study__cta-footer">
+          <p>{project.cta.body}</p>
+          <a href={project.cta.action.href}>
+            <span>{project.cta.action.label}</span>
+            <span aria-hidden="true">{project.cta.action.suffix}</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </article>
+</BaseLayout>
+
+<style>
+  .case-study {
+    --case-study-accent-text: #a32e18;
+    --color-secondary: #625e56;
+    background: var(--color-neutral);
+    color: var(--color-primary);
+  }
+
+  .case-study__inner,
+  .case-section__inner {
+    margin-inline: auto;
+    max-width: 1344px;
+  }
+
+  .case-study__hero {
+    padding: clamp(56px, 7vw, 104px) clamp(20px, 3.34vw, 48px) clamp(72px, 9vw, 136px);
+  }
+
+  .case-study__rail,
+  .case-study__eyebrow,
+  .case-study__actions,
+  .case-section__label,
+  .case-study__cta-eyebrow,
+  figcaption {
+    align-items: center;
+    display: flex;
+  }
+
+  .case-study__rail {
+    border-top: 1px solid var(--color-line);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    justify-content: space-between;
+    letter-spacing: 0.055em;
+    padding-top: 14px;
+    text-transform: uppercase;
+  }
+
+  .case-study__eyebrow,
+  .case-study__cta-eyebrow {
+    gap: 12px;
+  }
+
+  .case-study__eyebrow span,
+  .case-study__cta-eyebrow span {
+    background: var(--color-tertiary);
+    height: 1px;
+    width: 34px;
+  }
+
+  .case-study__heading {
+    align-items: end;
+    display: grid;
+    gap: clamp(48px, 8vw, 140px);
+    grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.75fr);
+    margin-top: clamp(72px, 10vw, 156px);
+  }
+
+  h1 {
+    font-size: clamp(4.5rem, 10.8vw, 9.75rem);
+    font-weight: 600;
+    letter-spacing: -0.074em;
+    line-height: 0.76;
+  }
+
+  .case-study__opening {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .case-study__headline {
+    font-size: clamp(1.75rem, 2.8vw, 2.5rem);
+    font-weight: 600;
+    letter-spacing: -0.045em;
+    line-height: 1.05;
+  }
+
+  .case-study__introduction {
+    color: var(--color-secondary);
+    font-size: clamp(1rem, 1.4vw, 1.1875rem);
+    line-height: 1.55;
+  }
+
+  .case-study__ledger {
+    align-items: end;
+    border-top: 1px solid var(--color-line);
+    display: grid;
+    gap: 40px;
+    grid-template-columns: 1fr auto;
+    margin-top: clamp(64px, 8vw, 112px);
+    padding-top: 18px;
+  }
+
+  .case-study__facts {
+    display: grid;
+    gap: 18px 36px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    max-width: 890px;
+  }
+
+  .case-study__facts div {
+    display: grid;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    gap: 8px;
+    grid-template-columns: 70px 1fr;
+    letter-spacing: 0.015em;
+    line-height: 1.45;
+  }
+
+  .case-study__facts dt {
+    color: var(--color-secondary);
+    text-transform: uppercase;
+  }
+
+  .case-study__facts dd {
+    margin: 0;
+  }
+
+  .case-study__actions {
+    gap: 28px;
+  }
+
+  .case-study__actions a,
+  .case-study__cta-footer a {
+    align-items: center;
+    border-bottom: 1px solid currentColor;
+    display: inline-flex;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    gap: 18px;
+    justify-content: space-between;
+    letter-spacing: 0.025em;
+    min-height: 46px;
+    text-decoration: none;
+    transition: padding-inline var(--transition-fast);
+  }
+
+  .case-study__actions a:hover,
+  .case-study__cta-footer a:hover {
+    padding-inline: 7px;
+  }
+
+  .case-study__hero-media {
+    background: var(--color-surface);
+    border-block: 1px solid var(--color-line);
+    margin: 0;
+    padding: clamp(20px, 4vw, 64px) clamp(20px, 3.34vw, 48px) 0;
+  }
+
+  .case-study__hero-media-inner {
+    align-items: end;
+    display: grid;
+    gap: clamp(14px, 2vw, 28px);
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 24%);
+    margin-inline: auto;
+    max-width: 1344px;
+  }
+
+  .case-study__hero-media img,
+  .case-study__figure img,
+  .accessibility-proof figure img {
+    border: 1px solid var(--color-line);
+    height: auto;
+    width: 100%;
+  }
+
+  .case-study__mobile-image {
+    max-height: 620px;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  figcaption {
+    color: var(--color-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 500;
+    justify-content: space-between;
+    letter-spacing: 0.045em;
+    line-height: 1.3;
+    min-height: 36px;
+    text-transform: uppercase;
+  }
+
+  .case-study__hero-media > figcaption {
+    margin-inline: auto;
+    max-width: 1344px;
+  }
+
+  .case-section {
+    border-top: 1px solid var(--color-line);
+    padding: clamp(88px, 11vw, 164px) clamp(20px, 3.34vw, 48px);
+  }
+
+  .case-section--challenge {
+    border-top: 0;
+  }
+
+  .case-section--system,
+  .case-section--accessibility {
+    background: var(--color-surface);
+  }
+
+  .case-section__header {
+    align-items: start;
+    display: grid;
+    gap: clamp(32px, 5vw, 76px);
+    grid-template-columns: minmax(130px, 0.35fr) minmax(320px, 1.15fr) minmax(280px, 0.75fr);
+  }
+
+  .case-section__label,
+  .case-study__cta-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    gap: 12px;
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+  }
+
+  .case-section__label span {
+    color: var(--case-study-accent-text);
+  }
+
+  .case-section__header h2,
+  .case-study__cta h2 {
+    font-size: clamp(3rem, 6.2vw, 5.5rem);
+    font-weight: 600;
+    letter-spacing: -0.064em;
+    line-height: 0.94;
+  }
+
+  .case-section__header > p:last-child {
+    color: var(--color-secondary);
+    font-size: clamp(1rem, 1.4vw, 1.1875rem);
+    line-height: 1.55;
+  }
+
+  .case-section__principle {
+    border-left: 3px solid var(--color-tertiary);
+    font-size: clamp(2.25rem, 5.5vw, 5rem);
+    font-weight: 600;
+    letter-spacing: -0.06em;
+    line-height: 0.98;
+    margin: clamp(88px, 12vw, 170px) 0 0 clamp(0px, 12vw, 170px);
+    max-width: 1020px;
+    padding-left: clamp(20px, 3vw, 42px);
+  }
+
+  .case-study__figure {
+    margin: clamp(72px, 9vw, 128px) 0 0;
+  }
+
+  .discipline-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    list-style: none;
+    margin: clamp(72px, 9vw, 128px) 0 0;
+    padding: 0;
+  }
+
+  .discipline-list li {
+    border-top: 1px solid var(--color-line);
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 44px minmax(150px, 0.55fr) 1fr;
+    padding: 22px 24px 34px 0;
+  }
+
+  .discipline-list li:nth-child(odd) {
+    margin-right: 24px;
+  }
+
+  .discipline-list li:nth-child(even) {
+    border-left: 1px solid var(--color-line);
+    padding-left: 24px;
+  }
+
+  .discipline-list li > span,
+  .accessibility-proof li > span {
+    color: var(--case-study-accent-text);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+  }
+
+  .discipline-list h3 {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  .discipline-list p {
+    color: var(--color-secondary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .accessibility-proof {
+    align-items: end;
+    display: grid;
+    gap: clamp(52px, 10vw, 160px);
+    grid-template-columns: minmax(240px, 390px) 1fr;
+    margin: clamp(72px, 9vw, 128px) auto 0;
+    max-width: 1060px;
+  }
+
+  .accessibility-proof figure {
+    margin: 0;
+  }
+
+  .accessibility-proof figure img {
+    background: #00853e;
+  }
+
+  .accessibility-proof ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .accessibility-proof li {
+    align-items: baseline;
+    border-top: 1px solid var(--color-line);
+    display: grid;
+    gap: 24px;
+    grid-template-columns: 44px 1fr;
+    padding: 24px 0 38px;
+  }
+
+  .accessibility-proof li p {
+    font-size: clamp(1.5rem, 2.6vw, 2.25rem);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+  }
+
+  .shipped-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: clamp(72px, 9vw, 128px) 0 0;
+  }
+
+  .shipped-list div {
+    border-top: 1px solid var(--color-line);
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(100px, 0.4fr) 1fr;
+    padding: 22px 24px 36px 0;
+  }
+
+  .shipped-list div:nth-child(odd) {
+    margin-right: 24px;
+  }
+
+  .shipped-list div:nth-child(even) {
+    border-left: 1px solid var(--color-line);
+    padding-left: 24px;
+  }
+
+  .shipped-list dt {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .shipped-list dd {
+    color: var(--color-secondary);
+    margin: 0;
+  }
+
+  .case-study__cta {
+    background: var(--color-tertiary);
+    color: var(--color-on-tertiary);
+    padding: clamp(88px, 10vw, 144px) clamp(20px, 3.34vw, 48px) clamp(48px, 6vw, 80px);
+  }
+
+  .case-study__cta-eyebrow span {
+    background: currentColor;
+  }
+
+  .case-study__cta h2 {
+    font-size: clamp(4.5rem, 10vw, 9rem);
+    line-height: 0.82;
+    margin-top: clamp(88px, 13vw, 190px);
+  }
+
+  .case-study__cta-footer {
+    align-items: end;
+    border-top: 1px solid color-mix(in srgb, var(--color-on-tertiary) 35%, transparent);
+    display: flex;
+    gap: 48px;
+    justify-content: space-between;
+    margin-top: clamp(64px, 8vw, 112px);
+    padding-top: 20px;
+  }
+
+  .case-study__cta-footer p {
+    font-size: clamp(1rem, 1.4vw, 1.25rem);
+    line-height: 1.5;
+    max-width: 560px;
+  }
+
+  .case-study__cta-footer a {
+    flex: 0 0 min(300px, 26vw);
+  }
+
+  .case-study__cta a:focus-visible {
+    box-shadow: none;
+    outline-color: var(--color-primary);
+  }
+
+  @media (max-width: 900px) {
+    .case-study__heading,
+    .case-section__header {
+      grid-template-columns: 1fr;
+    }
+
+    .case-study__heading {
+      align-items: start;
+    }
+
+    .case-study__opening {
+      max-width: 650px;
+    }
+
+    .case-study__ledger {
+      align-items: start;
+      grid-template-columns: 1fr;
+    }
+
+    .case-study__actions {
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .case-section__header {
+      gap: 28px;
+    }
+
+    .case-section__header > p:last-child {
+      max-width: 620px;
+    }
+
+    .discipline-list,
+    .shipped-list {
+      grid-template-columns: 1fr;
+    }
+
+    .discipline-list li:nth-child(odd),
+    .shipped-list div:nth-child(odd) {
+      margin-right: 0;
+    }
+
+    .discipline-list li:nth-child(even),
+    .shipped-list div:nth-child(even) {
+      border-left: 0;
+      padding-left: 0;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .case-study__hero {
+      padding-top: 40px;
+    }
+
+    .case-study__rail {
+      align-items: flex-start;
+      gap: 24px;
+    }
+
+    .case-study__rail > p:last-child {
+      text-align: right;
+    }
+
+    .case-study__heading {
+      margin-top: 72px;
+    }
+
+    h1 {
+      font-size: clamp(3.5rem, 18vw, 5.5rem);
+      line-height: 0.82;
+    }
+
+    .case-study__facts {
+      grid-template-columns: 1fr;
+    }
+
+    .case-study__facts div {
+      grid-template-columns: 62px 1fr;
+    }
+
+    .case-study__actions {
+      align-items: stretch;
+      flex-direction: column-reverse;
+      gap: 12px;
+    }
+
+    .case-study__actions a {
+      width: 100%;
+    }
+
+    .case-study__hero-media-inner {
+      grid-template-columns: 1fr;
+    }
+
+    .case-study__desktop-image {
+      min-height: 280px;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .case-study__mobile-image {
+      justify-self: end;
+      width: min(72%, 280px) !important;
+    }
+
+    .case-study__hero-media > figcaption span:last-child,
+    .case-study__figure figcaption span:last-child {
+      display: none;
+    }
+
+    .case-section__principle {
+      margin-left: 0;
+    }
+
+    .discipline-list li {
+      gap: 12px;
+      grid-template-columns: 34px 1fr;
+    }
+
+    .discipline-list li p {
+      grid-column: 2;
+    }
+
+    .accessibility-proof {
+      align-items: start;
+      grid-template-columns: 1fr;
+    }
+
+    .accessibility-proof figure {
+      justify-self: center;
+      width: min(86%, 340px);
+    }
+
+    .shipped-list div {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .case-study__cta h2 {
+      font-size: clamp(3.25rem, 16vw, 5.5rem);
+      line-height: 0.84;
+    }
+
+    .case-study__cta-footer {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .case-study__cta-footer a {
+      flex: none;
+      width: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .case-study__actions a,
+    .case-study__cta-footer a {
+      transition: none;
+    }
+  }
+</style>

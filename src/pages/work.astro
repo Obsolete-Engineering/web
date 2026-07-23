@@ -1,16 +1,22 @@
 ---
 import { Image } from 'astro:assets';
-import desktopImage from '../assets/img/craft-applied-desktop.jpg';
+import craftAppliedImage from '../assets/img/craft-applied-desktop.jpg';
+import triggerDevImage from '../assets/img/trigger-dev-desktop.jpg';
 import workHeroImage from '../assets/img/obsolete/mali2.png';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { workPageCopy as copy } from '../copy';
+
+const projectImages = {
+  'craft-applied': craftAppliedImage,
+  'trigger-dev': triggerDevImage,
+} as const;
 ---
 
 <BaseLayout
   title={copy.metaTitle}
   description={copy.metaDescription}
-  image={desktopImage.src}
-  imageAlt={copy.project.imageAlt}
+  image={craftAppliedImage.src}
+  imageAlt={copy.projects[0].imageAlt}
 >
   <header class="work-index__hero">
     <div class="work-index__inner work-index__hero-grid">
@@ -46,33 +52,40 @@ import { workPageCopy as copy } from '../copy';
 
   <section class="work-index__projects" aria-label="Published case studies">
     <div class="work-index__inner">
-      <a class="project" href={copy.project.href} aria-label={`${copy.project.action}: ${copy.project.title}`}>
-        <div class="project__rail">
-          <span>{copy.project.index}</span>
-          <span>Design + development</span>
-        </div>
-
-        <div class="project__heading">
-          <h2>{copy.project.title}</h2>
-          <div>
-            <p class="project__statement">{copy.project.statement}</p>
-            <p class="project__summary">{copy.project.summary}</p>
+      {copy.projects.map((project) => (
+        <a
+          class="project"
+          href={project.href}
+          aria-label={`${project.action}: ${project.title}`}
+          style={`--project-media-background: ${project.id === 'trigger-dev' ? '#101114' : '#00853e'}`}
+        >
+          <div class="project__rail">
+            <span>{project.index}</span>
+            <span>Design + development</span>
           </div>
-        </div>
 
-        <figure>
-          <Image
-            src={desktopImage}
-            alt={copy.project.imageAlt}
-            loading="eager"
-            decoding="async"
-          />
-          <figcaption>
-            <span>{copy.project.action}</span>
-            <span aria-hidden="true">→</span>
-          </figcaption>
-        </figure>
-      </a>
+          <div class="project__heading">
+            <h2>{project.title}</h2>
+            <div>
+              <p class="project__statement">{project.statement}</p>
+              <p class="project__summary">{project.summary}</p>
+            </div>
+          </div>
+
+          <figure>
+            <Image
+              src={projectImages[project.id]}
+              alt={project.imageAlt}
+              loading={project.index === '01' ? 'eager' : 'lazy'}
+              decoding="async"
+            />
+            <figcaption>
+              <span>{project.action}</span>
+              <span aria-hidden="true">→</span>
+            </figcaption>
+          </figure>
+        </a>
+      ))}
     </div>
   </section>
 </BaseLayout>
@@ -200,6 +213,10 @@ import { workPageCopy as copy } from '../copy';
     text-decoration: none;
   }
 
+  .project + .project {
+    margin-top: clamp(72px, 10vw, 144px);
+  }
+
   .project__rail {
     border-top: 1px solid var(--color-line);
     display: flex;
@@ -213,7 +230,7 @@ import { workPageCopy as copy } from '../copy';
   }
 
   .project__rail span:first-child {
-    color: var(--color-tertiary);
+    color: #a32e18;
   }
 
   .project__heading {
@@ -250,7 +267,7 @@ import { workPageCopy as copy } from '../copy';
   }
 
   .project figure {
-    background: #00853e;
+    background: var(--project-media-background);
     border: 1px solid var(--color-line);
     margin: 0;
     overflow: hidden;
